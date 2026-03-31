@@ -1,0 +1,26 @@
+# General
+.git
+.gitignore
+.dockerignore
+*.md
+LICENSE
+
+# Dockerfiles (not needed in build context, passed via -f)
+Dockerfile*
+
+# Editor / IDE
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Not used by Dockerfile.trixie
+mp2/
+screenrc
+buildx-setup.sh
+buildx.sh

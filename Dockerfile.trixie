@@ -1,0 +1,210 @@
+# syntax=docker/dockerfile:1.4
+# Version pins
+ARG PYTHON_VERSION=3.14.3
+ARG DEBIAN_SUITE=trixie
+ARG GCC_VERSION=14
+
+# Global build arguments (must be re-declared after FROM to use)
+ARG USER=student
+ARG HOME=/home/student
+ARG LOCALE=C.UTF-8
+ARG TZ=Asia/Taipei
+ARG USE_SYSTEMD=no
+ARG USER_PSWD=CHANGE_ME
+ARG USE_USER_PSWD=no
+
+# Repository source
+ARG REPOSOURCE=https://github.com/ntu-csieos26spring/2026ta-wg
+ARG IMGDESC="general heavily stripped xv6 image for machine problems"
+
+###############################################
+# Stage 1a: Build QEMU from source
+###############################################
+FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}-${DEBIAN_SUITE} AS builder
+
+ARG TARGETARCH
+ARG BUILDARCH
+
+ENV container=docker
+ENV DEBIAN_FRONTEND=noninteractive
+
+USER root
+WORKDIR /
+
+# Prepare packages, if need to cross compile, prepare the target arch packages
+RUN <<EOF
+apt-get update -qq -y
+apt-get install -qq -y ninja-build pkg-config gawk
+if [ "$TARGETARCH" != "$BUILDARCH" ]; then
+    case "$TARGETARCH" in
+        arm64) dpkg --add-architecture arm64 && apt-get update -qq -y && apt-get install -qq -y gcc-aarch64-linux-gnu libglib2.0-dev:arm64 libpixman-1-dev:arm64 zlib1g-dev:arm64 ;;
+        amd64) dpkg --add-architecture amd64 && apt-get update -qq -y && apt-get install -qq -y gcc-x86-64-linux-gnu libglib2.0-dev:amd64 libpixman-1-dev:amd64 zlib1g-dev:amd64 ;;
+    esac
+fi
+mkdir -p /scripts
+EOF
+
+COPY run-with-utils.sh /scripts/run-with-utils.sh
+COPY utils/ /scripts/utils/
+COPY qemu-build/ /scripts/qemu-build
+
+RUN --mount=type=cache,target=/qemu-cache,id=qemu-${TARGETARCH} <<EOF
+CROSS_PREFIX=""
+if [ "$TARGETARCH" != "$BUILDARCH" ]; then
+    case "$TARGETARCH" in
+        arm64) CROSS_PREFIX="aarch64-linux-gnu-" ;;
+        amd64) CROSS_PREFIX="x86_64-linux-gnu-" ;;
+    esac
+fi
+export CROSS_PREFIX
+QEMU_CACHE_DIR=/qemu-cache /scripts/run-with-utils.sh setup_all_plugins_in /scripts/qemu-build
+EOF
+
+RUN <<EOF
+git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git
+mkdir -p /ble
+make -C ble.sh install PREFIX=/ble
+EOF
+
+# smuggle the install script (clone avoids raw.githubusercontent.com which may be blocked)
+RUN <<EOF
+git clone --depth 1 https://github.com/ohmybash/oh-my-bash.git /tmp/oh-my-bash
+cp /tmp/oh-my-bash/tools/install.sh /ble/omb-install.sh
+rm -rf /tmp/oh-my-bash
+EOF
+
+###############################################
+# Stage 1b: Build fixuid (avoids GitHub CDN)
+###############################################
+FROM --platform=$BUILDPLATFORM golang:1-${DEBIAN_SUITE} AS fixuid-builder
+ARG TARGETARCH
+ARG DEBIAN_SUITE
+RUN <<EOF
+GOOS=linux GOARCH=${TARGETARCH} CGO_ENABLED=0 \ 
+go install github.com/boxboat/fixuid@v0.6.0
+find /go/bin -name fixuid -exec install -m 0755 {} /usr/local/bin/fixuid \;
+EOF
+
+###############################################
+# Stage 2: Cherry-pick runtime scripts
+###############################################
+FROM scratch AS scripts
+
+# Root-owned files → COPY to /
+COPY --from=builder /usr/local/bin/qemu-system-riscv64 /rootfs/usr/local/bin/qemu-system-riscv64
+COPY --from=builder /usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin /rootfs/usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin
+COPY --from=fixuid-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
+COPY tmux.conf /rootfs/etc/tmux.conf
+COPY image-root/ /rootfs/root/
+
+# User-owned files → COPY to ${HOME}
+COPY run-with-utils.sh /homefs/scripts/run-with-utils.sh
+COPY utils/ /homefs/scripts/utils/
+COPY core-locale/ /homefs/scripts/core-locale/
+COPY core-systemd/ /homefs/scripts/core-systemd/
+COPY --from=builder /ble/ /homefs/.local/
+
+###############################################
+# Stage 3: Final slim image
+###############################################
+ARG PYTHON_VERSION
+ARG DEBIAN_SUITE
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_SUITE} AS runner
+
+ARG PYTHON_VERSION
+ARG GCC_VERSION
+ARG USER
+ARG HOME
+ARG LOCALE
+ARG TZ
+ARG USE_SYSTEMD
+ARG TARGETARCH
+ARG TARGETPLATFORM
+ARG REPOSOURCE
+ARG IMGDESC
+
+LABEL org.opencontainers.image.architecture="${TARGETARCH}" \
+      org.opencontainers.image.platform="${TARGETPLATFORM}" \
+      org.opencontainers.image.description="${IMGDESC}" \
+      org.opencontainers.image.source="${REPOSOURCE}"
+
+ENV container=docker
+ENV DEBIAN_FRONTEND=noninteractive
+ENV USER=${USER}
+ENV LC_ALL=${LOCALE}
+ENV LANG=${LOCALE}
+ENV TERM=xterm-256color
+
+USER root
+
+# Copy root-owned files (QEMU binaries, /etc configs)
+COPY --from=scripts /rootfs/ /
+
+# Setup user, install packages, cleanup
+RUN <<EOF
+set -euo pipefail
+case "$TARGETARCH" in
+    amd64) ARCH_TRIPLE="x86_64-linux-gnu" ;;
+    arm64) ARCH_TRIPLE="aarch64-linux-gnu" ;;
+    *)     ARCH_TRIPLE="${TARGETARCH}-linux-gnu" ;;
+esac
+
+# source scripts, orders matter
+. /root/packages.sh
+. /root/setup.sh
+. /root/fixuid.sh
+. /root/pip.sh
+. /root/cleanup.sh
+rm -f /root/*.sh
+EOF
+
+USER ${USER}
+WORKDIR ${HOME}
+
+
+RUN <<EOF
+mkdir -p $HOME/.config/gdb
+EOF
+
+# Copy user-owned files (scripts, ble.sh, oh-my-bash installer)
+COPY --chown=${USER}:${USER} --from=scripts /homefs/ ${HOME}/
+
+RUN <<EOF
+set -euo pipefail
+echo -e "[\e[1;34mINFO\e[0m] Setup user $USER"
+export LOCALE="${LOCALE}"
+export TZ="${TZ}"
+$HOME/scripts/run-with-utils.sh setup_all_plugins_in $HOME/scripts/core-locale
+export USE_SYSTEMD="${USE_SYSTEMD}"
+$HOME/scripts/run-with-utils.sh setup_all_plugins_in $HOME/scripts/core-systemd
+# gdb safe-path
+echo "add-auto-load-safe-path $HOME/xv6/.gdbinit" > $HOME/.config/gdb/gdbinit
+# script installation
+bash $HOME/.local/omb-install.sh
+sed -i 's/^OSH_THEME=.*/OSH_THEME="vscode"/' $HOME/.bashrc
+# rm -rf $HOME/.oh-my-bash/.git*
+rm $HOME/.local/omb-install.sh
+echo 'source -- $HOME/.local/share/blesh/ble.sh' >> $HOME/.bashrc
+# Remove build-only scripts
+rm -rf $HOME/scripts/
+# Cleanup
+sudo apt-get autoremove -y
+sudo apt-get clean
+sudo rm -rf /tmp/* \
+    /var/lib/apt/lists/* \
+    /var/tmp/* \
+    /lib/systemd/system/local-fs.target.wants/* \
+    /lib/systemd/system/systemd-update-utmp* \
+    /lib/systemd/system/systemd-resolved.service \
+    /usr/share/doc/* \
+    /usr/share/info/*
+EOF
+
+ARG USER_PSWD
+ARG USE_USER_PSWD
+RUN ([ $USE_USER_PSWD = yes ] && \
+    echo "${USER}:${USER_PSWD}" | sudo chpasswd) || \
+    true
+
+ENTRYPOINT ["fixuid", "-q"]
+CMD ["/bin/bash"]

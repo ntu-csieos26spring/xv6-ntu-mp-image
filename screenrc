@@ -1,0 +1,12 @@
+# Set the default shell to bash
+shell "/bin/bash"
+
+# Skip the startup license credits notice
+startup_message off
+
+# Set a scrollback buffer
+defscrollback 65536
+
+# Add a status line at the bottom to see your windows
+hardstatus alwayslastline
+hardstatus string '%{= kG}[ %H ] %{= kw}%-Lw%{= rW}%n %t%{-}%+Lw %=%{= kG}[ %Y-%m-%d %c ]'
