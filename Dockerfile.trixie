@@ -161,11 +161,6 @@ EOF
 USER ${USER}
 WORKDIR ${HOME}
 
-
-RUN <<EOF
-mkdir -p $HOME/.config/gdb
-EOF
-
 # Copy user-owned files (scripts, ble.sh, oh-my-bash installer)
 COPY --chown=${USER}:${USER} --from=scripts /homefs/ ${HOME}/
 
@@ -178,6 +173,7 @@ $HOME/scripts/run-with-utils.sh setup_all_plugins_in $HOME/scripts/core-locale
 export USE_SYSTEMD="${USE_SYSTEMD}"
 $HOME/scripts/run-with-utils.sh setup_all_plugins_in $HOME/scripts/core-systemd
 # gdb safe-path
+mkdir -p $HOME/.config/gdb
 echo "add-auto-load-safe-path $HOME/xv6/.gdbinit" > $HOME/.config/gdb/gdbinit
 # script installation
 bash $HOME/.local/omb-install.sh
