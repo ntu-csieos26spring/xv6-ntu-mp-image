@@ -97,10 +97,6 @@ COPY tmux.conf /rootfs/etc/tmux.conf
 COPY image-root/ /rootfs/root/
 
 # User-owned files → COPY to ${HOME}
-COPY run-with-utils.sh /homefs/scripts/run-with-utils.sh
-COPY utils/ /homefs/scripts/utils/
-COPY core-locale/ /homefs/scripts/core-locale/
-COPY core-systemd/ /homefs/scripts/core-systemd/
 COPY --from=builder /ble/ /homefs/.local/
 
 ###############################################
@@ -149,6 +145,8 @@ esac
 
 # source scripts, orders matter
 . /root/packages.sh
+. /root/locale.sh
+. /root/systemd.sh
 . /root/setup.sh
 . /root/fixuid.sh
 . /root/pip.sh
@@ -165,11 +163,6 @@ COPY --chown=${USER}:${USER} --from=scripts /homefs/ ${HOME}/
 RUN <<EOF
 set -euo pipefail
 echo -e "[\e[1;34mINFO\e[0m] Setup user $USER"
-export LOCALE="${LOCALE}"
-export TZ="${TZ}"
-$HOME/scripts/run-with-utils.sh setup_all_plugins_in $HOME/scripts/core-locale
-export USE_SYSTEMD="${USE_SYSTEMD}"
-$HOME/scripts/run-with-utils.sh setup_all_plugins_in $HOME/scripts/core-systemd
 # gdb safe-path
 mkdir -p $HOME/.config/gdb
 echo "add-auto-load-safe-path $HOME/xv6/.gdbinit" > $HOME/.config/gdb/gdbinit
@@ -179,19 +172,6 @@ sed -i 's/^OSH_THEME=.*/OSH_THEME="vscode"/' $HOME/.bashrc
 # rm -rf $HOME/.oh-my-bash/.git*
 rm $HOME/.local/omb-install.sh
 echo 'source -- $HOME/.local/share/blesh/ble.sh' >> $HOME/.bashrc
-# Remove build-only scripts
-rm -rf $HOME/scripts/
-# Cleanup
-sudo apt-get autoremove -y
-sudo apt-get clean
-sudo rm -rf /tmp/* \
-    /var/lib/apt/lists/* \
-    /var/tmp/* \
-    /lib/systemd/system/local-fs.target.wants/* \
-    /lib/systemd/system/systemd-update-utmp* \
-    /lib/systemd/system/systemd-resolved.service \
-    /usr/share/doc/* \
-    /usr/share/info/*
 EOF
 
 ARG USER_PSWD
