@@ -2,7 +2,6 @@
 # Version pins
 ARG PYTHON_VERSION=3.14
 ARG DEBIAN_SUITE=trixie
-ARG GCC_VERSION=14
 
 # Global build arguments (must be re-declared after FROM to use)
 ARG USER=student
@@ -14,8 +13,8 @@ ARG USER_PSWD=CHANGE_ME
 ARG USE_USER_PSWD=no
 
 # Repository source
-ARG REPOSOURCE=https://github.com/ntu-csieos26spring/xv6-ntu-mp-image
-ARG IMGDESC="general heavily stripped xv6 image for machine problems"
+ARG REPOSOURCE
+ARG IMGDESC
 
 ###############################################
 # Stage 1a: Build QEMU from source
@@ -112,7 +111,6 @@ ARG DEBIAN_SUITE
 FROM python:${PYTHON_VERSION}-slim-${DEBIAN_SUITE} AS runner
 
 ARG PYTHON_VERSION
-ARG GCC_VERSION
 ARG USER
 ARG HOME
 ARG LOCALE

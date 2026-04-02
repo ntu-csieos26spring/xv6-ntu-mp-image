@@ -1,6 +1,8 @@
 #!/bin/sh
 set -euo pipefail
 
+GCC_VERSION="$(gcc -dumpfullversion -dumpversion | cut -d. -f1)"
+
 apt-get autoremove -y
 apt-get clean
 
