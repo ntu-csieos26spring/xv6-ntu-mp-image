@@ -169,7 +169,6 @@ echo "add-auto-load-safe-path $HOME/xv6/.gdbinit" > $HOME/.config/gdb/gdbinit
 # script installation
 bash $HOME/.local/omb-install.sh
 sed -i 's/^OSH_THEME=.*/OSH_THEME="vscode"/' $HOME/.bashrc
-# rm -rf $HOME/.oh-my-bash/.git*
 rm $HOME/.local/omb-install.sh
 echo 'source -- $HOME/.local/share/blesh/ble.sh' >> $HOME/.bashrc
 EOF
