@@ -2,15 +2,18 @@
 set -euo pipefail
 
 export DOCKER_CLIENT_TIMEOUT=300
-DOCKER_CMD="${DOCKER_CMD:-docker}"
+DOCKER_CMD="docker"
+ORG="ghcr.io/ntu-csieos26spring"
+IMG="mp-draft"
+TAG="latest"
 
-REPOSOURCE="https://github.com/ntu-csieos26spring/xv6-ntu-mp-image"
+REPOSOURCE="https://github.com/$ORG/xv6-ntu-mp-image"
 IMGDESC="general heavily stripped xv6 image for machine problems"
 
 $DOCKER_CMD buildx build \
     --builder cluster-builder \
     --platform linux/amd64,linux/arm64 \
-    -t ghcr.io/ntu-csieos26spring/mp-draft:latest \
+    -t "$ORG/$IMG:$TAG"\
     --build-arg "REPOSOURCE=$REPOSOURCE" \
     --build-arg "IMGDESC=$IMGDESC" \
     --annotation "index:org.opencontainers.image.description=$IMGDESC" \

@@ -19,8 +19,9 @@ Dockerfile*
 .DS_Store
 Thumbs.db
 
-# Not used by Dockerfile.trixie
-mp2/
+# Not used by Dockerfile
 screenrc
+buildx-setup.sh.template
+buildx.sh.template
 buildx-setup.sh
 buildx.sh
