@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # Version pins
-ARG PYTHON_VERSION=3.14.3
+ARG PYTHON_VERSION=3.14
 ARG DEBIAN_SUITE=trixie
 ARG GCC_VERSION=14
 
@@ -14,7 +14,7 @@ ARG USER_PSWD=CHANGE_ME
 ARG USE_USER_PSWD=no
 
 # Repository source
-ARG REPOSOURCE=https://github.com/ntu-csieos26spring/2026ta-wg
+ARG REPOSOURCE=https://github.com/ntu-csieos26spring/xv6-ntu-mp-image
 ARG IMGDESC="general heavily stripped xv6 image for machine problems"
 
 ###############################################
