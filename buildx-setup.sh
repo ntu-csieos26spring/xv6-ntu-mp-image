@@ -1,6 +1,8 @@
-set -eu
+#!/bin/bash
+set -euo pipefail
 
-DOCKER_CMD="docker"
+export DOCKER_CLIENT_TIMEOUT=300
+DOCKER_CMD="${DOCKER_CMD:-docker}"
 
 MASTER_BUILDKIT_PORT=15424
 SLAVE_BUILDKIT_PORT=15423

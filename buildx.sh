@@ -1,3 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+
 export DOCKER_CLIENT_TIMEOUT=300
 DOCKER_CMD="${DOCKER_CMD:-docker}"
 
