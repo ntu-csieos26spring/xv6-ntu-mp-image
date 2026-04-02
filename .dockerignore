@@ -21,7 +21,9 @@ Thumbs.db
 
 # Not used by Dockerfile
 screenrc
-buildx-setup.sh.template
-buildx.sh.template
 buildx-setup.sh
 buildx.sh
+buildx-remote-fg.sh
+build.conf.template
+*.conf
+!tmux.conf

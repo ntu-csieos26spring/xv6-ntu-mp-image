@@ -1,27 +1,27 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 export DOCKER_CLIENT_TIMEOUT=300
-DOCKER_CMD="docker"
 
-MASTER_BUILDKIT_PORT=15424
-SLAVE_BUILDKIT_PORT=15423
-SLAVE_HOST="10.2.15.142"
-MASTER_PLATFORM="linux/amd64"
-SLAVE_PLATFORM="linux/arm64"
+CONFIG_FILE="${1:-build.conf}"
+if [ ! -f "$CONFIG_FILE"]; then
+    echo "Usage: ./buildx-setup.sh [build.conf]"
+    exit 1
+fi
+source "$CONFIG_FILE"
 
 # remove the existing things
-"$DOCKER_CMD" buildx rm cluster-builder || true
+$DOCKER_CMD buildx rm cluster-builder > /dev/null 2>&1 || true
 
 # start local buildkitd (listen on localhost only)
-$DOCKER_CMD rm -f buildkitd-master || true
+$DOCKER_CMD rm -f buildkitd-master >/dev/null 2>&1 || true
 $DOCKER_CMD run --rm -d --name buildkitd-master --privileged \
-  -p 127.0.0.1:${MASTER_BUILDKIT_PORT}:1234 \
+  -p ${MASTER_HOST}:${MASTER_BUILDKIT_PORT}:1234 \
   moby/buildkit:buildx-stable-1 --addr tcp://0.0.0.0:1234
 
 # wait for buildkitd to be ready
 for i in $(seq 10 -1 1); do
-  if "$DOCKER_CMD" logs buildkitd-master 2>&1 | grep -q "running server"; then
+  if $DOCKER_CMD logs buildkitd-master 2>&1 | grep -q "running server"; then
     echo "buildkitd-master is ready"
     break
   fi
@@ -30,7 +30,7 @@ for i in $(seq 10 -1 1); do
 done
 
 # multi-node builder (both using remote driver)
-$DOCKER_CMD buildx create --name cluster-builder --use --node master_node --platform ${MASTER_PLATFORM} --driver remote tcp://127.0.0.1:${MASTER_BUILDKIT_PORT}
+$DOCKER_CMD buildx create --name cluster-builder --use --node master_node --platform ${MASTER_PLATFORM} --driver remote tcp://${MASTER_HOST}:${MASTER_BUILDKIT_PORT}
 $DOCKER_CMD buildx create --name cluster-builder --append --node slave_node --platform ${SLAVE_PLATFORM} --driver remote tcp://${SLAVE_HOST}:${SLAVE_BUILDKIT_PORT}
 
 # Bootstrap and verify

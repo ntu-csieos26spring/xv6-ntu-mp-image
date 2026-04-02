@@ -9,6 +9,6 @@
 .DS_Store
 Thumbs.db
 
-# Build scripts
-buildx-setup.sh
-buildx.sh
+# Build configuration
+*.conf
+!tmux.conf
