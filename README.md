@@ -14,9 +14,13 @@ A multi-architecture Docker image for NTU xv6 machine problems. Builds a slim, s
 
 ```bash
 ./auth.sh <your-github-username>
+# or, if Docker requires root:
+DOCKER_CMD="sudo docker" ./auth.sh <your-github-username>
 ```
 
 This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`.
+
+> **Note:** Every script respects the `DOCKER_CMD` environment variable (defaults to `docker`). If your Docker daemon requires `sudo` or you use Podman, prefix commands with `DOCKER_CMD="sudo docker"` or `DOCKER_CMD="podman"`.
 
 ### 2. Create your config files
 
@@ -67,7 +71,6 @@ Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
 
 | Variable | Description | Default |
 |---|---|---|
-| `DOCKER_CMD` | Docker-compatible CLI to use | `docker` |
 | **Image manifest** | | |
 | `ORGANIZATION` | Registry + org prefix (e.g. `ghcr.io/ntu-csieos26spring`) | |
 | `IMAGE_NAME` | Image name | `mp-draft` |
@@ -84,11 +87,10 @@ Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
 
 ### `remote.conf` (distributed BuildKit cluster)
 
-Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`). Includes its own `DOCKER_CMD`.
+Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
 
 | Variable | Description | Default |
 |---|---|---|
-| `DOCKER_CMD` | Docker-compatible CLI to use | `docker` |
 | `MASTER_BUILDKIT_PORT` | Port the local BuildKit daemon listens on | `15424` |
 | `SLAVE_BUILDKIT_PORT` | Port the remote BuildKit daemon listens on | `15423` |
 | `MASTER_HOST` | IP of the master (local) machine | `127.0.0.1` |
@@ -107,6 +109,8 @@ Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`). 
 ├── buildx-remote-fg.sh      # Runs BuildKit on the remote slave node (distributed)
 ├── buildx.sh                # Builds and pushes via the cluster builder (distributed)
 ├── buildx-local.sh          # Builds and pushes on a single machine (slow, emulated)
+├── va.sh                    # Vulnerability analysis with Trivy + Grype
+├── add-completions.sh       # Loads shell completions for va.sh into the current session
 ├── Dockerfile               # Multi-stage build definition
 ├── run-with-utils.sh        # Loader that sources utils/ then runs a command
 ├── utils/                   # Shell utility library (logging, pkg helpers, etc.)
@@ -122,6 +126,30 @@ Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`). 
 │   └── cleanup.sh           # Strips unused libs and caches to shrink image
 ├── tmux.conf                # tmux configuration baked into /etc/tmux.conf
 └── screenrc                 # GNU Screen configuration (not used in image)
+```
+
+## Vulnerability Analysis
+
+`va.sh` scans a Docker image for known vulnerabilities using both [Trivy](https://github.com/aquasecurity/trivy) and [Grype](https://github.com/anchore/grype), then converts the SARIF reports to CSV via [sarif-tools](https://pypi.org/project/sarif-tools/).
+
+```bash
+./va.sh <[organization/]image[:tag]>
+```
+
+The script:
+1. Exports the image to a tarball under `/tmp/image-tarballs/`
+2. Runs Trivy and Grype in containers against the tarball
+3. Parses the SARIF output into CSV files under `va-reports/`
+
+If reports already exist for the image, the script prompts before overwriting.
+
+### Shell completions
+
+Source `add-completions.sh` to get tab-completion for image names in `va.sh`:
+
+```bash
+source ./add-completions.sh
+./va.sh <TAB>              # completes from local Docker images
 ```
 
 ## Dockerfile Stages

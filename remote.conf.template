@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-DOCKER_CMD="docker"
 
 ## Buildkit remote setup ##
 
