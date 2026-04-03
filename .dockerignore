@@ -29,3 +29,7 @@ build.conf.template
 remote.conf.template
 *.conf
 !tmux.conf
+va.sh
+va-reports/
+.venv/
+image-va/

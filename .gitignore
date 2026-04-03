@@ -12,3 +12,5 @@ Thumbs.db
 # Build configuration
 *.conf
 !tmux.conf
+va-reports/
+image-va/
