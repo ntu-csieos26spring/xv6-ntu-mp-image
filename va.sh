@@ -1,12 +1,36 @@
 #!/usr/bin/env bash
-set -euo pipefail
+DOCKER_CMD="${DOCKER_CMD:-docker}"
+
+if [[ "$1" == "--completion" ]];then
+    # Output the static function using quoted 'EOF' to prevent variable expansion
+    cat <<EOF
+_va_sh_completion() {
+    local cur="\${COMP_WORDS[COMP_CWORD]}"
+    if [[ \${COMP_CWORD} -eq 1 ]]; then
+        local images=\$(DOCKER_CMD="${DOCKER_CMD}" "\$1" --suggest-images)
+        COMPREPLY=( \$(compgen -W "\${images}" -- "\${cur}") )
+    else
+        COMPREPLY=()
+    fi
+}
+EOF
+    echo "complete -F _va_sh_completion '$0' '$(basename "$0")'"
+    exit 0
+fi
+
+# The hidden flag that does the actual lookup
+if [[ "$1" == "--suggest-images" ]]; then
+    # The script knows exactly what DOCKER_CMD is here.
+    $DOCKER_CMD images --format "{{.Repository}}:{{.Tag}}" | grep -v "<none>"
+    exit 0
+fi
 
 if [ $# != 1 ]; then
 	echo 'Usage: [DOCKER_CMD="sudo docker"] ./va.sh <[organization/]image[:tag]>'
 	exit 1
 fi
 
-DOCKER_CMD="${DOCKER_CMD:-docker}"
+set -euo pipefail
 IMAGE="$1"
 OUTPUT_FORMAT="csv"
 OUTPUT_OPTION=("--autotrim")
