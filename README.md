@@ -39,13 +39,13 @@ The `buildx-setup.sh` / `buildx.sh` scripts dispatch each platform to a **native
 On the **remote (slave) node**, start a BuildKit daemon in the foreground:
 
 ```bash
-./buildx-remote-fg.sh      # reads build.conf + remote.conf
+./buildx-remote-fg.sh      # reads remote.conf
 ```
 
 On the **master node**, create the multi-node builder and kick off the build:
 
 ```bash
-./buildx-setup.sh          # reads build.conf + remote.conf, creates cluster-builder
+./buildx-setup.sh          # reads remote.conf, creates cluster-builder
 ./buildx.sh                # reads build.conf, builds both platforms natively, then pushes
 ```
 
@@ -57,7 +57,7 @@ If you only have one machine, `buildx-local.sh` builds both platforms locally us
 ./buildx-local.sh
 ```
 
-All scripts accept optional config path arguments. `buildx-local.sh` and `buildx.sh` take `[build.conf]`; `buildx-setup.sh` and `buildx-remote-fg.sh` take `[build.conf] [remote.conf]`.
+All scripts accept an optional config path argument. `buildx-local.sh` and `buildx.sh` default to `build.conf`; `buildx-setup.sh` and `buildx-remote-fg.sh` default to `remote.conf`.
 
 ## Configuration
 
@@ -84,10 +84,11 @@ Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
 
 ### `remote.conf` (distributed BuildKit cluster)
 
-Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
+Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`). Includes its own `DOCKER_CMD`.
 
 | Variable | Description | Default |
 |---|---|---|
+| `DOCKER_CMD` | Docker-compatible CLI to use | `docker` |
 | `MASTER_BUILDKIT_PORT` | Port the local BuildKit daemon listens on | `15424` |
 | `SLAVE_BUILDKIT_PORT` | Port the remote BuildKit daemon listens on | `15423` |
 | `MASTER_HOST` | IP of the master (local) machine | `127.0.0.1` |

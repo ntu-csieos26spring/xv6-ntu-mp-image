@@ -3,14 +3,12 @@ set -euo pipefail
 
 export DOCKER_CLIENT_TIMEOUT=300
 
-BUILD_CONF="${1:-build.conf}"
-REMOTE_CONF="${2:-remote.conf}"
-if [ ! -f "$BUILD_CONF" ] || [ ! -f "$REMOTE_CONF" ]; then
-    echo "Usage: ./buildx-setup.sh [build.conf] [remote.conf]"
+CONFIG_FILE="${1:-remote.conf}"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Usage: ./buildx-setup.sh [remote.conf]"
     exit 1
 fi
-source "$BUILD_CONF"
-source "$REMOTE_CONF"
+source "$CONFIG_FILE"
 
 # remove the existing things
 $DOCKER_CMD buildx rm cluster-builder > /dev/null 2>&1 || true
