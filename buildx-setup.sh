@@ -31,8 +31,8 @@ for i in $(seq 10 -1 1); do
 done
 
 # multi-node builder (both using remote driver)
-$DOCKER_CMD buildx create --name cluster-builder --use --node master_node --platform "${MASTER_PLATFORM} --driver remote tcp://${MASTER_HOST}:${MASTER_BUILDKIT_PORT}"
-$DOCKER_CMD buildx create --name cluster-builder --append --node slave_node --platform "${SLAVE_PLATFORM} --driver remote tcp://${SLAVE_HOST}:${SLAVE_BUILDKIT_PORT}"
+$DOCKER_CMD buildx create --name cluster-builder --use --node master_node --platform "${MASTER_PLATFORM}" --driver remote "tcp://${MASTER_HOST}:${MASTER_BUILDKIT_PORT}"
+$DOCKER_CMD buildx create --name cluster-builder --append --node slave_node --platform "${SLAVE_PLATFORM}" --driver remote "tcp://${SLAVE_HOST}:${SLAVE_BUILDKIT_PORT}"
 
 # Bootstrap and verify
 $DOCKER_CMD buildx inspect cluster-builder --bootstrap
