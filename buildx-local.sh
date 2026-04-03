@@ -8,9 +8,15 @@ Consider using the distributed build (buildx-setup.sh + buildx.sh) if you
 have access to machines of both architectures.
 WARN
 
-CONFIG_FILE="${1:-build.conf}"
+CONFIG_FILE="build.conf"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -c) CONFIG_FILE="$2"; shift 2 ;;
+        *) break ;;
+    esac
+done
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Usage: ./buildx-local.sh [build.conf]"
+    echo "Usage: ./buildx-local.sh [-c config] [docker-options...]"
     exit 1
 fi
 source "$CONFIG_FILE"

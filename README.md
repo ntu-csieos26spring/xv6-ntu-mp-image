@@ -57,7 +57,7 @@ If you only have one machine, `buildx-local.sh` builds both platforms locally us
 ./buildx-local.sh
 ```
 
-All scripts accept an optional config path argument. `buildx-local.sh` and `buildx.sh` default to `build.conf`; `buildx-setup.sh` and `buildx-remote-fg.sh` default to `remote.conf`.
+Both `buildx.sh` and `buildx-local.sh` accept `-c <config>` to override the config file (defaults to `build.conf`). Any remaining arguments are forwarded to `docker buildx build` (e.g. `--no-cache`). `buildx-setup.sh` and `buildx-remote-fg.sh` accept an optional config path argument and default to `remote.conf`.
 
 ## Configuration
 

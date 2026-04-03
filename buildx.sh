@@ -3,9 +3,15 @@ set -euo pipefail
 
 export DOCKER_CLIENT_TIMEOUT=300
 
-CONFIG_FILE="${1:-build.conf}"
+CONFIG_FILE="build.conf"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -c) CONFIG_FILE="$2"; shift 2 ;;
+        *) break ;;
+    esac
+done
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Usage: ./buildx.sh [build.conf]"
+    echo "Usage: ./buildx.sh [-c config] [docker-options...]"
     exit 1
 fi
 source "$CONFIG_FILE"
