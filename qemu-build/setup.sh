@@ -25,7 +25,8 @@ else
 fi
 print_info "Verifying QEMU ${QEMU_VER} signature..."
 wget -q "https://download.qemu.org/${QEMU_TARBALL}.sig"
-gpg --keyserver hkps://keys.openpgp.org --recv-keys CEACC9E15534EBABB82D3FA03353C9CEF108B584
+QEMU_KEY="${QEMU_GPG_KEY:-CEACC9E15534EBABB82D3FA03353C9CEF108B584}"
+gpg --keyserver hkps://keys.openpgp.org --recv-keys "$QEMU_KEY"
 gpg --verify "${QEMU_TARBALL}.sig" "${QEMU_TARBALL}"
 
 print_info "Extracting and configuring QEMU..."
@@ -54,6 +55,6 @@ make install
 
 # Cleanup source (reduces builder stage cache size)
 cd /tmp
-rm -rf "qemu-${QEMU_VER}" "${QEMU_TARBALL}"
+rm -rf "qemu-${QEMU_VER}" "${QEMU_TARBALL}" "${QEMU_TARBALL}.sig"
 
 print_info "QEMU ${QEMU_VER} build complete."

@@ -22,7 +22,12 @@ SLAVE_HOST="10.2.15.142"
 MASTER_PLATFORM="linux/amd64"
 SLAVE_PLATFORM="linux/arm64"
 
-## Image versions ##
-QEMU_VERSION="10.2.2"
+## Image configurations ##
+# Image versions
 PYTHON_VERSION="3.14"
 DEBIAN_SUITE=trixie
+
+# QEMU configurations
+QEMU_VERSION="10.2.2"
+QEMU_GPG_KEY="CEACC9E15534EBABB82D3FA03353C9CEF108B584"
+QEMU_RUNTIME_DEPS="libpng16-16 libcurl4"

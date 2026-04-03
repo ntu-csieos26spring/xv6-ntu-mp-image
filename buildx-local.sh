@@ -21,6 +21,8 @@ $DOCKER_CMD buildx build \
     --build-arg "REPOSOURCE=$REPOSITORY_SOURCE" \
     --build-arg "IMGDESC=$IMAGE_DESCRIPTION" \
     --build-arg "QEMU_VERSION=$QEMU_VERSION" \
+    --build-arg "QEMU_GPG_KEY=$QEMU_GPG_KEY" \
+    --build-arg "QEMU_RUNTIME_DEPS=$QEMU_RUNTIME_DEPS" \
     --build-arg "PYTHON_VERSION=$PYTHON_VERSION" \
     --build-arg "DEBIAN_SUITE=$DEBIAN_SUITE" \
     --annotation "index:org.opencontainers.image.description=$IMAGE_DESCRIPTION" \

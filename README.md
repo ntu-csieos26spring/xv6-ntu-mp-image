@@ -80,6 +80,8 @@ Copy `build.conf.template` to `build.conf` (git-ignored) and adjust the values:
 | `SLAVE_PLATFORM` | Platform of slave node | `linux/arm64` |
 | **Image versions** | | |
 | `QEMU_VERSION` | QEMU version to build from source | `10.2.2` |
+| `QEMU_GPG_KEY` | GPG key fingerprint for verifying the QEMU tarball | `CEACC9E1...` |
+| `QEMU_RUNTIME_DEPS` | QEMU runtime library packages (suite-specific names) | `libpng16-16 libcurl4` |
 | `PYTHON_VERSION` | Python base image version | `3.14` |
 | `DEBIAN_SUITE` | Debian release codename | `trixie` |
 
