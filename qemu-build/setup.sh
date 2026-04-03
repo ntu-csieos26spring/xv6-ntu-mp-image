@@ -2,7 +2,7 @@
 # Build QEMU from source for RISC-V targets (builder stage)
 # Adapted from mp2/setup.sh for Python 3.14 / Trixie
 
-QEMU_VER="10.2.2"
+QEMU_VER="${QEMU_VERSION:-10.2.2}"
 PIP_BUILD_PKGS="ninja sphinx sphinx_rtd_theme tomli distlib wheel setuptools"
 
 set -euo pipefail

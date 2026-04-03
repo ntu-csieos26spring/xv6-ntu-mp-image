@@ -72,6 +72,7 @@ Copy `build.conf.template` to `build.conf` (git-ignored) and adjust the values:
 | `MASTER_PLATFORM` | Platform of master node (`linux/amd64` or `linux/arm64`) | `linux/amd64` |
 | `SLAVE_PLATFORM` | Platform of slave node | `linux/arm64` |
 | **Image versions** | | |
+| `QEMU_VERSION` | QEMU version to build from source | `10.2.2` |
 | `PYTHON_VERSION` | Python base image version | `3.14` |
 | `DEBIAN_SUITE` | Debian release codename | `trixie` |
 

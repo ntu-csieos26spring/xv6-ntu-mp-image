@@ -16,6 +16,7 @@ $DOCKER_CMD buildx build \
     -t "$ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG"\
     --build-arg "REPOSOURCE=$REPOSITORY_SOURCE" \
     --build-arg "IMGDESC=$IMAGE_DESCRIPTION" \
+    --build-arg "QEMU_VERSION=$QEMU_VERSION" \
     --build-arg "PYTHON_VERSION=$PYTHON_VERSION" \
     --build-arg "DEBIAN_SUITE=$DEBIAN_SUITE" \
     --annotation "index:org.opencontainers.image.description=$IMAGE_DESCRIPTION" \

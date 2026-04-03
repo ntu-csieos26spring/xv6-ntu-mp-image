@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # Version pins
+ARG QEMU_VERSION=10.2.2
 ARG PYTHON_VERSION=3.14
 ARG DEBIAN_SUITE=trixie
 
@@ -21,6 +22,7 @@ ARG IMGDESC
 ###############################################
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}-${DEBIAN_SUITE} AS builder
 
+ARG QEMU_VERSION
 ARG TARGETARCH
 ARG BUILDARCH
 
@@ -47,6 +49,7 @@ COPY run-with-utils.sh /scripts/run-with-utils.sh
 COPY utils/ /scripts/utils/
 COPY qemu-build/ /scripts/qemu-build
 
+ENV QEMU_VERSION=${QEMU_VERSION}
 RUN --mount=type=cache,target=/qemu-cache,id=qemu-${TARGETARCH} <<EOF
 CROSS_PREFIX=""
 if [ "$TARGETARCH" != "$BUILDARCH" ]; then
