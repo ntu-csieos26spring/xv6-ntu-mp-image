@@ -18,4 +18,4 @@ _va_sh_completion() {
     return 0
 }
 
-compdef _va_sh_completion va.sh ./va.sh
+compdef _va_sh_completion va.sh ./va.sh ./scripts/va.sh scripts/va.sh

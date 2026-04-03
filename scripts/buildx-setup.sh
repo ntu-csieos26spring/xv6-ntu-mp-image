@@ -3,9 +3,10 @@ set -euo pipefail
 
 export DOCKER_CLIENT_TIMEOUT=300
 
-CONFIG_FILE="${1:-remote.conf}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${1:-$REPO_ROOT/configs/remote.conf}"
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Usage: [DOCKER_CMD="sudo docker"] ./buildx-setup.sh [remote.conf]"
+    echo "Usage: [DOCKER_CMD=\"sudo docker\"] ./scripts/buildx-setup.sh [remote.conf]"
     exit 1
 fi
 source "$CONFIG_FILE"

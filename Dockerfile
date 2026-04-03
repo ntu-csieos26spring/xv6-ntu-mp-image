@@ -100,7 +100,7 @@ FROM scratch AS scripts
 COPY --from=builder /usr/local/bin/qemu-system-riscv64 /rootfs/usr/local/bin/qemu-system-riscv64
 COPY --from=builder /usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin /rootfs/usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin
 COPY --from=fixuid-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
-COPY tmux.conf /rootfs/etc/tmux.conf
+COPY image-configs/tmux.conf /rootfs/etc/tmux.conf
 COPY image-root/ /rootfs/root/
 
 # User-owned files → COPY to ${HOME}

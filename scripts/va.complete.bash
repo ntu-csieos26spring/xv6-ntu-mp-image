@@ -18,4 +18,4 @@ _va_sh_completion() {
     return 0
 }
 
-complete -o nospace -F _va_sh_completion "./va.sh" "$(basename "./va.sh")"
+complete -o nospace -F _va_sh_completion "./va.sh" "va.sh" "./scripts/va.sh" "scripts/va.sh"

@@ -3,7 +3,8 @@ set -euo pipefail
 
 export DOCKER_CLIENT_TIMEOUT=300
 
-CONFIG_FILE="build.conf"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="$REPO_ROOT/configs/build.conf"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -c) CONFIG_FILE="$2"; shift 2 ;;
@@ -11,7 +12,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Usage: [DOCKER_CMD="sudo docker"] ./buildx.sh [-c config] [docker-options...]"
+    echo "Usage: [DOCKER_CMD=\"sudo docker\"] ./scripts/buildx.sh [-c config] [docker-options...]"
     exit 1
 fi
 source "$CONFIG_FILE"
@@ -31,4 +32,4 @@ $DOCKER_CMD buildx build \
     --annotation "index:org.opencontainers.image.description=$IMAGE_DESCRIPTION" \
     --annotation "index:org.opencontainers.image.source=$REPOSITORY_SOURCE" \
     "$@" \
-    --push .
+    --push "$REPO_ROOT"

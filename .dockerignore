@@ -20,16 +20,9 @@ Dockerfile*
 Thumbs.db
 
 # Not used by Dockerfile
-screenrc
-buildx-setup.sh
-buildx.sh
-buildx-remote-fg.sh
-buildx-local.sh
-build.conf.template
-remote.conf.template
-*.conf
-!tmux.conf
-va.*sh
+scripts/
+configs/
+image-configs/screenrc
 va-reports/
 .venv/
 image-va/

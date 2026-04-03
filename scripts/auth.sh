@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ $# != 1 ]; then
-	echo 'Usage: [DOCKER_CMD="sudo docker"] ./auth.sh <GitHub Username>'
+	echo 'Usage: [DOCKER_CMD="sudo docker"] ./scripts/auth.sh <GitHub Username>'
 	exit 1
 fi
 

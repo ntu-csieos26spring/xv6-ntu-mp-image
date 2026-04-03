@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 DOCKER_CMD="${DOCKER_CMD:-docker}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [ $# != 1 ]; then
-	echo 'Usage: [DOCKER_CMD="sudo docker"] ./va.sh <[organization/]image[:tag]>'
+	echo 'Usage: [DOCKER_CMD="sudo docker"] ./scripts/va.sh <[organization/]image[:tag]>'
 	exit 1
 fi
 
@@ -17,7 +18,7 @@ GRYPE_CACHE="/tmp/grype-cache"
 # Replace ':' with '-'
 FILENAME="${IMAGE//:/_}"
 FILEDIR="$(dirname "$FILENAME")"
-OUTPUT_DIR="va-reports/"
+OUTPUT_DIR="$REPO_ROOT/va-reports/"
 TRIVY_OUTPUT_PATH="$OUTPUT_DIR/$FILENAME.trivy.$OUTPUT_FORMAT"
 GRYPE_OUTPUT_PATH="$OUTPUT_DIR/$FILENAME.grype.$OUTPUT_FORMAT"
 # Do not modify the variables above
@@ -70,13 +71,13 @@ $DOCKER_CMD run --rm \
 
 # Parse the SARIF file to OUTPUT_FORMAT
 echo "===Outputting==="
-if [ ! -d ".venv" ]; then
-    uv venv image-va --python 3.11
-    uv pip install sarif-tools 
+if [ ! -d "$REPO_ROOT/.venv" ]; then
+    uv venv "$REPO_ROOT/image-va" --python 3.11
+    uv pip install sarif-tools
 fi
 
 # shellcheck source=/dev/null
-source .venv/bin/activate
+source "$REPO_ROOT/.venv/bin/activate"
 mkdir -p "$OUTPUT_DIR/$FILEDIR"
 sarif $OUTPUT_FORMAT -o "$TRIVY_OUTPUT_PATH" "${SARIF_OUTPUT_OPTION[@]}" "$TRIVY_CACHE/image-reports/$FILENAME.trivy.sarif"
 sarif $OUTPUT_FORMAT -o "$GRYPE_OUTPUT_PATH" "${SARIF_OUTPUT_OPTION[@]}" "$GRYPE_CACHE/image-reports/$FILENAME.grype.sarif"

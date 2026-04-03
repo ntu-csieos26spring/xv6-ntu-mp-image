@@ -13,9 +13,9 @@ A multi-architecture Docker image for NTU xv6 machine problems. Builds a slim, s
 ### 1. Authenticate with GHCR
 
 ```bash
-./auth.sh <your-github-username>
+./scripts/auth.sh <your-github-username>
 # or, if Docker requires root:
-DOCKER_CMD="sudo docker" ./auth.sh <your-github-username>
+DOCKER_CMD="sudo docker" ./scripts/auth.sh <your-github-username>
 ```
 
 This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`.
@@ -25,8 +25,8 @@ This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`.
 ### 2. Create your config files
 
 ```bash
-cp build.conf.template build.conf       # image settings (always needed)
-cp remote.conf.template remote.conf     # remote BuildKit cluster (distributed builds only)
+cp configs/build.conf.template configs/build.conf       # image settings (always needed)
+cp configs/remote.conf.template configs/remote.conf     # remote BuildKit cluster (distributed builds only)
 # Edit both to match your environment
 ```
 
@@ -43,14 +43,14 @@ The `buildx-setup.sh` / `buildx.sh` scripts dispatch each platform to a **native
 On the **remote (slave) node**, start a BuildKit daemon in the foreground:
 
 ```bash
-./buildx-remote-fg.sh      # reads remote.conf
+./scripts/buildx-remote-fg.sh      # reads configs/remote.conf
 ```
 
 On the **master node**, create the multi-node builder and kick off the build:
 
 ```bash
-./buildx-setup.sh          # reads remote.conf, creates cluster-builder
-./buildx.sh                # reads build.conf, builds both platforms natively, then pushes
+./scripts/buildx-setup.sh          # reads configs/remote.conf, creates cluster-builder
+./scripts/buildx.sh                # reads configs/build.conf, builds both platforms natively, then pushes
 ```
 
 #### Option B: Local build (single machine)
@@ -58,16 +58,16 @@ On the **master node**, create the multi-node builder and kick off the build:
 If you only have one machine, `buildx-local.sh` builds both platforms locally using the default builder. The non-native platform is emulated via QEMU userspace emulation, which is **significantly slower**.
 
 ```bash
-./buildx-local.sh
+./scripts/buildx-local.sh
 ```
 
-Both `buildx.sh` and `buildx-local.sh` accept `-c <config>` to override the config file (defaults to `build.conf`). Any remaining arguments are forwarded to `docker buildx build` (e.g. `--no-cache`). `buildx-setup.sh` and `buildx-remote-fg.sh` accept an optional config path argument and default to `remote.conf`.
+Both `buildx.sh` and `buildx-local.sh` accept `-c <config>` to override the config file (defaults to `configs/build.conf`). Any remaining arguments are forwarded to `docker buildx build` (e.g. `--no-cache`). `buildx-setup.sh` and `buildx-remote-fg.sh` accept an optional config path argument and default to `configs/remote.conf`.
 
 ## Configuration
 
 Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
 
-### `build.conf` (image settings)
+### `configs/build.conf` (image settings)
 
 | Variable | Description | Default |
 |---|---|---|
@@ -85,7 +85,7 @@ Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
 | `QEMU_GPG_KEY` | GPG key fingerprint for verifying the QEMU tarball | `CEACC9E1...` |
 | `QEMU_RUNTIME_DEPS` | QEMU runtime library packages (suite-specific names) | `libpng16-16 libcurl4` |
 
-### `remote.conf` (distributed BuildKit cluster)
+### `configs/remote.conf` (distributed BuildKit cluster)
 
 Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
 
@@ -102,30 +102,35 @@ Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
 
 ```
 .
-├── build.conf.template      # Template for image build configuration
-├── remote.conf.template     # Template for distributed BuildKit cluster setup
-├── auth.sh                  # GitHub + GHCR login helper
-├── buildx-setup.sh          # Creates the multi-node BuildKit cluster (distributed)
-├── buildx-remote-fg.sh      # Runs BuildKit on the remote slave node (distributed)
-├── buildx.sh                # Builds and pushes via the cluster builder (distributed)
-├── buildx-local.sh          # Builds and pushes on a single machine (slow, emulated)
-├── va.sh                    # Vulnerability analysis with Trivy + Grype
-├── add-completions.sh       # Loads shell completions for va.sh into the current session
 ├── Dockerfile               # Multi-stage build definition
 ├── run-with-utils.sh        # Loader that sources utils/ then runs a command
+├── scripts/                 # Executable scripts
+│   ├── auth.sh              # GitHub + GHCR login helper
+│   ├── buildx-setup.sh      # Creates the multi-node BuildKit cluster (distributed)
+│   ├── buildx-remote-fg.sh  # Runs BuildKit on the remote slave node (distributed)
+│   ├── buildx.sh            # Builds and pushes via the cluster builder (distributed)
+│   ├── buildx-local.sh      # Builds and pushes on a single machine (slow, emulated)
+│   ├── va.sh                # Vulnerability analysis with Trivy + Grype
+│   ├── add-completions.sh   # Loads shell completions for va.sh into the current session
+│   ├── va.complete.bash     # Bash completions for va.sh
+│   └── va.complete.zsh      # Zsh completions for va.sh
+├── configs/                 # Build configuration templates
+│   ├── build.conf.template  # Template for image build configuration
+│   └── remote.conf.template # Template for distributed BuildKit cluster setup
+├── image-configs/           # Configuration files baked into the image
+│   ├── tmux.conf            # tmux configuration baked into /etc/tmux.conf
+│   └── screenrc             # GNU Screen configuration (not used in image)
 ├── utils/                   # Shell utility library (logging, pkg helpers, etc.)
 ├── qemu-build/
 │   └── setup.sh             # Downloads, verifies, and compiles QEMU 10.2.2
-├── image-root/              # Scripts sourced during the final image setup
-│   ├── packages.sh          # Installs runtime APT packages
-│   ├── locale.sh            # Configures locale and timezone
-│   ├── systemd.sh           # Optional systemd installation
-│   ├── setup.sh             # Creates the student user
-│   ├── fixuid.sh            # Configures fixuid for UID remapping
-│   ├── pip.sh               # Installs Python packages (parse)
-│   └── cleanup.sh           # Strips unused libs and caches to shrink image
-├── tmux.conf                # tmux configuration baked into /etc/tmux.conf
-└── screenrc                 # GNU Screen configuration (not used in image)
+└── image-root/              # Scripts sourced during the final image setup
+    ├── packages.sh          # Installs runtime APT packages
+    ├── locale.sh            # Configures locale and timezone
+    ├── systemd.sh           # Optional systemd installation
+    ├── setup.sh             # Creates the student user
+    ├── fixuid.sh            # Configures fixuid for UID remapping
+    ├── pip.sh               # Installs Python packages (parse)
+    └── cleanup.sh           # Strips unused libs and caches to shrink image
 ```
 
 ## Vulnerability Analysis
@@ -133,7 +138,7 @@ Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
 `va.sh` scans a Docker image for known vulnerabilities using both [Trivy](https://github.com/aquasecurity/trivy) and [Grype](https://github.com/anchore/grype), then converts the SARIF reports to CSV via [sarif-tools](https://pypi.org/project/sarif-tools/).
 
 ```bash
-./va.sh <[organization/]image[:tag]>
+./scripts/va.sh <[organization/]image[:tag]>
 ```
 
 The script:
@@ -148,8 +153,8 @@ If reports already exist for the image, the script prompts before overwriting.
 Source `add-completions.sh` to get tab-completion for image names in `va.sh`:
 
 ```bash
-source ./add-completions.sh
-./va.sh <TAB>              # completes from local Docker images
+source ./scripts/add-completions.sh
+./scripts/va.sh <TAB>              # completes from local Docker images
 ```
 
 ## Dockerfile Stages

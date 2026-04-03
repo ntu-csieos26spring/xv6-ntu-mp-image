@@ -10,8 +10,10 @@
 Thumbs.db
 
 # Build configuration
-*.conf
-!tmux.conf
+configs/*
+!configs/*.template
+
+# VA outputs
 va-reports/
 image-va/
 *.tar.*
