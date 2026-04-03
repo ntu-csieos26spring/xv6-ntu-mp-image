@@ -179,7 +179,8 @@ bash $HOME/.local/omb-install.sh
 sed -i 's/^OSH_THEME=.*/OSH_THEME="vscode"/' $HOME/.bashrc
 sed -i '/^completions=(/,/^)/c\completions=(\n  git\n  pip3\n  tmux\n  makefile\n)' $HOME/.bashrc
 rm $HOME/.local/omb-install.sh
-touch $HOME/.bash_history
+# fake history to prevent "no history hang"
+echo "ls" > $HOME/.bash_history
 echo 'source -- $HOME/.local/share/blesh/ble.sh' >> $HOME/.bashrc
 EOF
 
