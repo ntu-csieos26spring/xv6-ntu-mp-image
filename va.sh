@@ -22,7 +22,7 @@ TRIVY_OUTPUT_PATH="$OUTPUT_DIR/$FILENAME.trivy.$OUTPUT_FORMAT"
 GRYPE_OUTPUT_PATH="$OUTPUT_DIR/$FILENAME.grype.$OUTPUT_FORMAT"
 
 # When the reports already exist, ask to continue
-if [ -f "TRIVY_OUTPUT_PATH" ] && [ -f "GRYPE_OUTPUT_PATH" ]; then
+if [ -f "$TRIVY_OUTPUT_PATH" ] && [ -f "$GRYPE_OUTPUT_PATH" ]; then
     read -rp "Reports exist, still want to continue? (y/N): " resp
     resp=${resp:-N}
     resp=$(echo "$resp" | cut -c1 | tr 'Y' 'y')
