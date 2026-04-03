@@ -54,7 +54,7 @@ COPY qemu-build/ /scripts/qemu-build
 
 ENV QEMU_VERSION=${QEMU_VERSION}
 ENV QEMU_GPG_KEY=${QEMU_GPG_KEY}
-RUN --mount=type=cache,target=/qemu-cache,id=qemu-${TARGETARCH} <<EOF
+RUN --mount=type=cache,target=/qemu-cache,id=qemu-${TARGETARCH}-${QEMU_VERSION} <<EOF
 CROSS_PREFIX=""
 if [ "$TARGETARCH" != "$BUILDARCH" ]; then
     case "$TARGETARCH" in
