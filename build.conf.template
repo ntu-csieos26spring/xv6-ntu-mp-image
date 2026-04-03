@@ -8,20 +8,6 @@ IMAGE_TAG="latest"
 REPOSITORY_SOURCE="https://github.com/$ORGANIZATION/xv6-ntu-mp-image"
 IMAGE_DESCRIPTION="general heavily stripped xv6 image for machine problems"
 
-## Buildkit setup ##
-
-# Buildkit public port, do not conflict 
-MASTER_BUILDKIT_PORT=15424
-SLAVE_BUILDKIT_PORT=15423
-
-# IP address of master and slave
-MASTER_HOST="127.0.0.1"
-SLAVE_HOST="10.2.15.142"
-
-# Check the arch with `uname -m`
-MASTER_PLATFORM="linux/amd64"
-SLAVE_PLATFORM="linux/arm64"
-
 ## Image configurations ##
 # Image versions
 PYTHON_VERSION="3.14"

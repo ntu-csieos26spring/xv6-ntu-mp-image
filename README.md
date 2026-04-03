@@ -18,14 +18,15 @@ A multi-architecture Docker image for NTU xv6 machine problems. Builds a slim, s
 
 This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`.
 
-### 2. Create your build config
+### 2. Create your config files
 
 ```bash
-cp build.conf.template build.conf
-# Edit build.conf to match your environment
+cp build.conf.template build.conf       # image settings (always needed)
+cp remote.conf.template remote.conf     # remote BuildKit cluster (distributed builds only)
+# Edit both to match your environment
 ```
 
-See [Configuring `build.conf`](#configuring-buildconf) below.
+See [Configuration](#configuration) below.
 
 ### 3. Build and push
 
@@ -38,14 +39,14 @@ The `buildx-setup.sh` / `buildx.sh` scripts dispatch each platform to a **native
 On the **remote (slave) node**, start a BuildKit daemon in the foreground:
 
 ```bash
-./buildx-remote-fg.sh
+./buildx-remote-fg.sh      # reads build.conf + remote.conf
 ```
 
 On the **master node**, create the multi-node builder and kick off the build:
 
 ```bash
-./buildx-setup.sh          # creates the cluster-builder
-./buildx.sh                # builds both platforms natively, then pushes
+./buildx-setup.sh          # reads build.conf + remote.conf, creates cluster-builder
+./buildx.sh                # reads build.conf, builds both platforms natively, then pushes
 ```
 
 #### Option B: Local build (single machine)
@@ -56,11 +57,13 @@ If you only have one machine, `buildx-local.sh` builds both platforms locally us
 ./buildx-local.sh
 ```
 
-All scripts accept an optional config path argument (defaults to `build.conf`).
+All scripts accept optional config path arguments. `buildx-local.sh` and `buildx.sh` take `[build.conf]`; `buildx-setup.sh` and `buildx-remote-fg.sh` take `[build.conf] [remote.conf]`.
 
-## Configuring `build.conf`
+## Configuration
 
-Copy `build.conf.template` to `build.conf` (git-ignored) and adjust the values:
+Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
+
+### `build.conf` (image settings)
 
 | Variable | Description | Default |
 |---|---|---|
@@ -71,25 +74,33 @@ Copy `build.conf.template` to `build.conf` (git-ignored) and adjust the values:
 | `IMAGE_TAG` | Image tag | `latest` |
 | `REPOSITORY_SOURCE` | URL embedded in OCI labels | |
 | `IMAGE_DESCRIPTION` | Human-readable description embedded in OCI labels | |
-| **BuildKit setup** | | |
+| **Image versions** | | |
+| `PYTHON_VERSION` | Python base image version | `3.14` |
+| `DEBIAN_SUITE` | Debian release codename | `trixie` |
+| **QEMU** | | |
+| `QEMU_VERSION` | QEMU version to build from source | `10.2.2` |
+| `QEMU_GPG_KEY` | GPG key fingerprint for verifying the QEMU tarball | `CEACC9E1...` |
+| `QEMU_RUNTIME_DEPS` | QEMU runtime library packages (suite-specific names) | `libpng16-16 libcurl4` |
+
+### `remote.conf` (distributed BuildKit cluster)
+
+Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
+
+| Variable | Description | Default |
+|---|---|---|
 | `MASTER_BUILDKIT_PORT` | Port the local BuildKit daemon listens on | `15424` |
 | `SLAVE_BUILDKIT_PORT` | Port the remote BuildKit daemon listens on | `15423` |
 | `MASTER_HOST` | IP of the master (local) machine | `127.0.0.1` |
 | `SLAVE_HOST` | IP of the slave (remote) machine | |
 | `MASTER_PLATFORM` | Platform of master node (`linux/amd64` or `linux/arm64`) | `linux/amd64` |
 | `SLAVE_PLATFORM` | Platform of slave node | `linux/arm64` |
-| **Image versions** | | |
-| `QEMU_VERSION` | QEMU version to build from source | `10.2.2` |
-| `QEMU_GPG_KEY` | GPG key fingerprint for verifying the QEMU tarball | `CEACC9E1...` |
-| `QEMU_RUNTIME_DEPS` | QEMU runtime library packages (suite-specific names) | `libpng16-16 libcurl4` |
-| `PYTHON_VERSION` | Python base image version | `3.14` |
-| `DEBIAN_SUITE` | Debian release codename | `trixie` |
 
 ## Project Structure
 
 ```
 .
-├── build.conf.template      # Template for build configuration (copy to build.conf)
+├── build.conf.template      # Template for image build configuration
+├── remote.conf.template     # Template for distributed BuildKit cluster setup
 ├── auth.sh                  # GitHub + GHCR login helper
 ├── buildx-setup.sh          # Creates the multi-node BuildKit cluster (distributed)
 ├── buildx-remote-fg.sh      # Runs BuildKit on the remote slave node (distributed)

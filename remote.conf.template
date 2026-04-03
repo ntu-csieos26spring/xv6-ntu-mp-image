@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+## Buildkit remote setup ##
+
+# Buildkit public port, do not conflict
+MASTER_BUILDKIT_PORT=15424
+SLAVE_BUILDKIT_PORT=15423
+
+# IP address of master and slave
+MASTER_HOST="127.0.0.1"
+SLAVE_HOST="10.2.15.142"
+
+# Check the arch with `uname -m`
+MASTER_PLATFORM="linux/amd64"
+SLAVE_PLATFORM="linux/arm64"
