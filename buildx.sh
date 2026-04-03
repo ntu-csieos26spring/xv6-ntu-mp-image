@@ -11,11 +11,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Usage: ./buildx.sh [-c config] [docker-options...]"
+    echo "Usage: [DOCKER_CMD="sudo docker"] ./buildx.sh [-c config] [docker-options...]"
     exit 1
 fi
 source "$CONFIG_FILE"
 
+DOCKER_CMD="${DOCKER_CMD:-docker}"
 $DOCKER_CMD buildx build \
     --builder cluster-builder \
     --platform linux/amd64,linux/arm64 \

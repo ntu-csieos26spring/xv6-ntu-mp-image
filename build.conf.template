@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-DOCKER_CMD="docker"
 
 ## Image manifest ##
 ORGANIZATION="ghcr.io/ntu-csieos26spring"
