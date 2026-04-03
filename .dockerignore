@@ -24,6 +24,7 @@ screenrc
 buildx-setup.sh
 buildx.sh
 buildx-remote-fg.sh
+buildx-local.sh
 build.conf.template
 *.conf
 !tmux.conf

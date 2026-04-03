@@ -27,29 +27,36 @@ cp build.conf.template build.conf
 
 See [Configuring `build.conf`](#configuring-buildconf) below.
 
-### 3. Set up the multi-node builder
+### 3. Build and push
 
-```bash
-./buildx-setup.sh          # uses build.conf by default
-# or
-./buildx-setup.sh my.conf  # use a custom config file
-```
+There are two ways to produce the multi-arch image:
 
-This starts a local BuildKit daemon and creates a `cluster-builder` that fans out to master (amd64) and slave (arm64) nodes.
+#### Option A: Distributed build (recommended)
 
-If you are the **remote (slave) node**, run this instead in the foreground:
+The `buildx-setup.sh` / `buildx.sh` scripts dispatch each platform to a **native** machine so nothing is emulated. This requires two machines -- one per architecture.
+
+On the **remote (slave) node**, start a BuildKit daemon in the foreground:
 
 ```bash
 ./buildx-remote-fg.sh
 ```
 
-### 4. Build and push
+On the **master node**, create the multi-node builder and kick off the build:
 
 ```bash
-./buildx.sh                # uses build.conf by default
+./buildx-setup.sh          # creates the cluster-builder
+./buildx.sh                # builds both platforms natively, then pushes
 ```
 
-The image is built for `linux/amd64` and `linux/arm64`, then pushed to the configured registry.
+#### Option B: Local build (single machine)
+
+If you only have one machine, `buildx-local.sh` builds both platforms locally using the default builder. The non-native platform is emulated via QEMU userspace emulation, which is **significantly slower**.
+
+```bash
+./buildx-local.sh
+```
+
+All scripts accept an optional config path argument (defaults to `build.conf`).
 
 ## Configuring `build.conf`
 
@@ -82,9 +89,10 @@ Copy `build.conf.template` to `build.conf` (git-ignored) and adjust the values:
 .
 ├── build.conf.template      # Template for build configuration (copy to build.conf)
 ├── auth.sh                  # GitHub + GHCR login helper
-├── buildx-setup.sh          # Creates the multi-node BuildKit cluster
-├── buildx-remote-fg.sh      # Runs BuildKit on the remote (slave) node
-├── buildx.sh                # Builds and pushes the multi-arch image
+├── buildx-setup.sh          # Creates the multi-node BuildKit cluster (distributed)
+├── buildx-remote-fg.sh      # Runs BuildKit on the remote slave node (distributed)
+├── buildx.sh                # Builds and pushes via the cluster builder (distributed)
+├── buildx-local.sh          # Builds and pushes on a single machine (slow, emulated)
 ├── Dockerfile               # Multi-stage build definition
 ├── run-with-utils.sh        # Loader that sources utils/ then runs a command
 ├── utils/                   # Shell utility library (logging, pkg helpers, etc.)
