@@ -66,7 +66,7 @@ $DOCKER_CMD run --rm \
   "docker.io/anchore/grype:$GRYPE_IMAGE_TAG" \
   "/workspace/$FILENAME.tar" \
   -o sarif \
-  --file "/root/.cache/grype/image-reports/$FILENAME.grype.sarif"
+  --file "/.cache/grype/image-reports/$FILENAME.grype.sarif"
 
 # Parse the SARIF file to OUTPUT_FORMAT
 echo "===Outputting==="
