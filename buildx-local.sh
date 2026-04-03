@@ -9,7 +9,7 @@ have access to machines of both architectures.
 WARN
 
 CONFIG_FILE="${1:-build.conf}"
-if [ ! -f "$CONFIG_FILE"]; then
+if [ ! -f "$CONFIG_FILE" ]; then
     echo "Usage: ./buildx-local.sh [build.conf]"
     exit 1
 fi

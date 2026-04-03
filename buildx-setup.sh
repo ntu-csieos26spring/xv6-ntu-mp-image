@@ -4,7 +4,7 @@ set -euo pipefail
 export DOCKER_CLIENT_TIMEOUT=300
 
 CONFIG_FILE="${1:-build.conf}"
-if [ ! -f "$CONFIG_FILE"]; then
+if [ ! -f "$CONFIG_FILE" ]; then
     echo "Usage: ./buildx-setup.sh [build.conf]"
     exit 1
 fi
