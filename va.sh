@@ -33,17 +33,23 @@ fi
 set -euo pipefail
 IMAGE="$1"
 OUTPUT_FORMAT="csv"
-OUTPUT_OPTION=("--autotrim")
 TARBALL_DIR="/tmp/image-tarballs"
 TRIVY_CACHE="/tmp/trivy-cache"
 GRYPE_CACHE="/tmp/grype-cache"
 
+# Do not modify the variables below
 # Replace ':' with '-'
 FILENAME="${IMAGE//:/_}"
 FILEDIR="$(dirname "$FILENAME")"
 OUTPUT_DIR="va-reports/"
 TRIVY_OUTPUT_PATH="$OUTPUT_DIR/$FILENAME.trivy.$OUTPUT_FORMAT"
 GRYPE_OUTPUT_PATH="$OUTPUT_DIR/$FILENAME.grype.$OUTPUT_FORMAT"
+# Do not modify the variables above
+
+# might need to modify
+SARIF_OUTPUT_OPTION=("--trim" "/workspace/$FILEDIR")
+TRIVY_IMAGE_TAG="0.69.3"
+GRYPE_IMAGE_TAG="v0.110.0"
 
 # When the reports already exist, ask to continue
 if [ -f "$TRIVY_OUTPUT_PATH" ] && [ -f "$GRYPE_OUTPUT_PATH" ]; then
@@ -67,7 +73,7 @@ mkdir -p "$TRIVY_CACHE/image-reports/$FILEDIR"
 $DOCKER_CMD run --rm \
   -v "$TARBALL_DIR":/workspace:ro,z \
   -v "$TRIVY_CACHE":/root/.cache/trivy \
-  docker.io/aquasec/trivy:0.69.3 \
+  "docker.io/aquasec/trivy:$TRIVY_IMAGE_TAG" \
   image \
   --input "/workspace/$FILENAME.tar" \
   -f sarif \
@@ -76,10 +82,12 @@ $DOCKER_CMD run --rm \
 # Grype
 echo "===Grype Analyzing==="
 mkdir -p "$GRYPE_CACHE/image-reports/$FILEDIR"
-podman run --rm \
+
+
+$DOCKER_CMD run --rm \
   -v "$TARBALL_DIR":/workspace:ro,z \
-  -v "$GRYPE_CACHE":/root/.cache/grype \
-  docker.io/anchore/grype:v0.110.0 \
+  -v "$GRYPE_CACHE":/.cache/grype \
+  "docker.io/anchore/grype:$GRYPE_IMAGE_TAG" \
   "/workspace/$FILENAME.tar" \
   -o sarif \
   --file "/root/.cache/grype/image-reports/$FILENAME.grype.sarif"
@@ -94,6 +102,6 @@ fi
 # shellcheck source=/dev/null
 source .venv/bin/activate
 mkdir -p "$OUTPUT_DIR/$FILEDIR"
-sarif $OUTPUT_FORMAT -o "$TRIVY_OUTPUT_PATH" "${OUTPUT_OPTION[@]}" "$TRIVY_CACHE/image-reports/$FILENAME.trivy.sarif"
-sarif $OUTPUT_FORMAT -o "$GRYPE_OUTPUT_PATH" "${OUTPUT_OPTION[@]}" "$GRYPE_CACHE/image-reports/$FILENAME.grype.sarif"
+sarif $OUTPUT_FORMAT -o "$TRIVY_OUTPUT_PATH" "${SARIF_OUTPUT_OPTION[@]}" "$TRIVY_CACHE/image-reports/$FILENAME.trivy.sarif"
+sarif $OUTPUT_FORMAT -o "$GRYPE_OUTPUT_PATH" "${SARIF_OUTPUT_OPTION[@]}" "$GRYPE_CACHE/image-reports/$FILENAME.grype.sarif"
 deactivate
