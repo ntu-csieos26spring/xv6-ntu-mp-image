@@ -143,7 +143,7 @@ USER root
 COPY --from=scripts /rootfs/ /
 
 # Setup user, install packages, cleanup
-RUN <<EOF
+RUN /bin/bash <<EOF
 set -euo pipefail
 case "$TARGETARCH" in
     amd64) ARCH_TRIPLE="x86_64-linux-gnu" ;;
@@ -168,7 +168,7 @@ WORKDIR ${HOME}
 # Copy user-owned files (scripts, ble.sh, oh-my-bash installer)
 COPY --chown=${USER}:${USER} --from=scripts /homefs/ ${HOME}/
 
-RUN <<EOF
+RUN /bin/bash <<EOF
 set -euo pipefail
 echo -e "[\e[1;34mINFO\e[0m] Setup user $USER"
 # gdb safe-path
