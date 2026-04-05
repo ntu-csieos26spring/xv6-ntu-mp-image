@@ -20,7 +20,7 @@ DOCKER_CMD="sudo docker" ./scripts/auth.sh <your-github-username>
 
 This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`.
 
-> **Note:** Every script respects the `DOCKER_CMD` environment variable (defaults to `docker`). If your Docker daemon requires `sudo` or you use Podman, prefix commands with `DOCKER_CMD="sudo docker"` or `DOCKER_CMD="podman"`.
+> **Note:** Every script respects the `DOCKER_CMD` environment variable (defaults to `docker`). You can `export DOCKER_CMD="sudo docker"` (or `"podman"`) once, or set it per-command as shown above.
 
 ### 2. Create your config files
 
@@ -122,7 +122,7 @@ Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
 │   └── screenrc             # GNU Screen configuration (not used in image)
 ├── utils/                   # Shell utility library (logging, pkg helpers, etc.)
 ├── qemu-build/
-│   └── setup.sh             # Downloads, verifies, and compiles QEMU 10.2.2
+│   └── setup.sh             # Downloads, verifies, and compiles QEMU (version from build.conf)
 └── image-root/              # Scripts sourced during the final image setup
     ├── packages.sh          # Installs runtime APT packages
     ├── locale.sh            # Configures locale and timezone
@@ -130,7 +130,7 @@ Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
     ├── setup.sh             # Creates the student user
     ├── fixuid.sh            # Configures fixuid for UID remapping
     ├── pip.sh               # Installs Python packages (parse)
-    └── cleanup.sh           # Strips unused libs and caches to shrink image
+    └── cleanup.sh           # Strips unused libs, caches, etc. to shrink image
 ```
 
 ## Vulnerability Analysis
@@ -184,6 +184,6 @@ Based on `python:<version>-slim-<suite>`. Copies in the two trees from `scripts`
 4. **setup.sh** -- creates the `student` user with passwordless sudo
 5. **fixuid.sh** -- configures fixuid so container UID can match the host user
 6. **pip.sh** -- installs the `parse` Python package
-7. **cleanup.sh** -- aggressively removes unused libs (sanitizers, LTO, docs) to shrink the image
+7. **cleanup.sh** -- aggressively removes unused libs (sanitizers, LTO, docs, etc.) to shrink the image
 
 Finally, as the `student` user, it sets up gdb safe-path, installs oh-my-bash + ble.sh into `.bashrc`, and optionally sets a user password. The entrypoint is `fixuid -q` so that bind-mounted volumes get correct ownership.
