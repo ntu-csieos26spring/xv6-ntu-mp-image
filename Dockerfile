@@ -44,7 +44,9 @@ WORKDIR /
 # Prepare packages, if need to cross compile, prepare the target arch packages
 RUN <<EOF
 apt-get update -qq -y
-apt-get install -qq -y python3 python3-pip ninja-build pkg-config gawk git make
+apt-get install -qq -y python3 python3-sphinx python3-sphinx-rtd-theme \
+    meson ninja-build pkg-config gawk git make \
+    libgnutls28-dev libsasl2-dev libgtk-3-dev libsdl2-dev libepoxy-dev libslirp-dev
 if [ "$TARGETARCH" != "$BUILDARCH" ]; then
     case "$TARGETARCH" in
         arm64) dpkg --add-architecture arm64 && apt-get update -qq -y && apt-get install -qq -y gcc-aarch64-linux-gnu libglib2.0-dev:arm64 libpixman-1-dev:arm64 zlib1g-dev:arm64 ;;

@@ -3,13 +3,8 @@
 # Adapted from mp2/setup.sh for Python 3.14 / Trixie
 
 QEMU_VER="${QEMU_VERSION:-10.2.2}"
-PIP_BUILD_PKGS="ninja sphinx sphinx_rtd_theme tomli distlib wheel setuptools"
 
 set -euo pipefail
-
-print_info "Installing Python build packages..."
-pip3 install --no-cache-dir --root-user-action=ignore --upgrade pip wheel setuptools
-pip3 install --no-cache-dir --root-user-action=ignore $PIP_BUILD_PKGS
 
 QEMU_TARBALL="qemu-${QEMU_VER}.tar.xz"
 CACHE_DIR="${QEMU_CACHE_DIR:-/tmp}"
