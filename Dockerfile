@@ -55,11 +55,10 @@ if [ "$TARGETARCH" != "$BUILDARCH" ]; then
         amd64) dpkg --add-architecture amd64 && apt-get update -qq -y && apt-get install -qq -y gcc-x86-64-linux-gnu libglib2.0-dev:amd64 libpixman-1-dev:amd64 zlib1g-dev:amd64 ;;
     esac
 fi
-mkdir -p /scripts
 EOF
 
-COPY run-with-utils.sh /scripts/run-with-utils.sh
-COPY utils/ /scripts/utils/
+COPY run-with-utils.sh /usr/bin/run-with-utils.sh
+COPY utils/ /usr/bin/utils/
 COPY qemu-build/ /scripts/qemu-build
 
 # Pre-verified tarball from qemu-source stage (layer-cached, no re-download)
@@ -76,7 +75,7 @@ if [ "$TARGETARCH" != "$BUILDARCH" ]; then
     esac
 fi
 export CROSS_PREFIX
-QEMU_CACHE_DIR=/qemu-cache . /scripts/run-with-utils.sh setup_all_plugins_in /scripts/qemu-build
+QEMU_CACHE_DIR=/qemu-cache . /usr/bin/run-with-utils.sh setup_all_plugins_in /scripts/qemu-build
 EOF
 
 RUN <<EOF
