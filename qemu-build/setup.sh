@@ -15,19 +15,8 @@ QEMU_TARBALL="qemu-${QEMU_VER}.tar.xz"
 CACHE_DIR="${QEMU_CACHE_DIR:-/tmp}"
 
 cd /tmp
-if [ -f "${CACHE_DIR}/${QEMU_TARBALL}" ]; then
-    print_info "Using cached QEMU ${QEMU_VER} tarball..."
-    cp "${CACHE_DIR}/${QEMU_TARBALL}" .
-else
-    print_info "Downloading QEMU ${QEMU_VER}..."
-    wget -q "https://download.qemu.org/${QEMU_TARBALL}"
-    cp "${QEMU_TARBALL}" "${CACHE_DIR}/" 2>/dev/null || true
-fi
-print_info "Verifying QEMU ${QEMU_VER} signature..."
-wget -q "https://download.qemu.org/${QEMU_TARBALL}.sig"
-QEMU_KEY="${QEMU_GPG_KEY:-CEACC9E15534EBABB82D3FA03353C9CEF108B584}"
-gpg --keyserver hkps://keys.openpgp.org --recv-keys "$QEMU_KEY"
-gpg --verify "${QEMU_TARBALL}.sig" "${QEMU_TARBALL}"
+print_info "Using pre-verified QEMU ${QEMU_VER} tarball..."
+cp "${CACHE_DIR}/${QEMU_TARBALL}" .
 
 print_info "Extracting and configuring QEMU..."
 tar -xJf "${QEMU_TARBALL}"
@@ -55,6 +44,6 @@ make install
 
 # Cleanup source (reduces builder stage cache size)
 cd /tmp
-rm -rf "qemu-${QEMU_VER}" "${QEMU_TARBALL}" "${QEMU_TARBALL}.sig"
+rm -rf "qemu-${QEMU_VER}" "${QEMU_TARBALL}"
 
 print_info "QEMU ${QEMU_VER} build complete."

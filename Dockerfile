@@ -6,12 +6,32 @@ ARG PYTHON_VERSION=3.14
 ARG DEBIAN_SUITE=trixie
 
 ###############################################
-# Stage 1a: Build QEMU from source
+# Stage 0: Download + verify QEMU source tarball
+# Depends only on QEMU_VERSION and GPG key — fully
+# cached regardless of DEBIAN_SUITE or PYTHON_VERSION.
 ###############################################
-FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}-${DEBIAN_SUITE} AS builder
+FROM --platform=$BUILDPLATFORM alpine:3.23 AS qemu-source
 
 ARG QEMU_VERSION
 ARG QEMU_GPG_KEY
+
+RUN <<EOF
+apk add --no-cache wget gnupg
+wget -q "https://download.qemu.org/qemu-${QEMU_VERSION}.tar.xz"
+wget -q "https://download.qemu.org/qemu-${QEMU_VERSION}.tar.xz.sig"
+gpg --keyserver hkps://keys.openpgp.org --recv-keys "$QEMU_GPG_KEY"
+gpg --verify "qemu-${QEMU_VERSION}.tar.xz.sig" "qemu-${QEMU_VERSION}.tar.xz"
+rm -f "qemu-${QEMU_VERSION}.tar.xz.sig"
+EOF
+
+###############################################
+# Stage 1a: Build QEMU + shell tools from source
+# Uses debian base (not python:) so PYTHON_VERSION changes don't
+# invalidate the QEMU build cache.
+###############################################
+FROM --platform=$BUILDPLATFORM debian:${DEBIAN_SUITE} AS builder
+
+ARG QEMU_VERSION
 ARG TARGETARCH
 ARG BUILDARCH
 
@@ -24,7 +44,7 @@ WORKDIR /
 # Prepare packages, if need to cross compile, prepare the target arch packages
 RUN <<EOF
 apt-get update -qq -y
-apt-get install -qq -y ninja-build pkg-config gawk
+apt-get install -qq -y python3 python3-pip ninja-build pkg-config gawk git make
 if [ "$TARGETARCH" != "$BUILDARCH" ]; then
     case "$TARGETARCH" in
         arm64) dpkg --add-architecture arm64 && apt-get update -qq -y && apt-get install -qq -y gcc-aarch64-linux-gnu libglib2.0-dev:arm64 libpixman-1-dev:arm64 zlib1g-dev:arm64 ;;
@@ -38,9 +58,11 @@ COPY run-with-utils.sh /scripts/run-with-utils.sh
 COPY utils/ /scripts/utils/
 COPY qemu-build/ /scripts/qemu-build
 
+# Pre-verified tarball from qemu-source stage (layer-cached, no re-download)
+COPY --from=qemu-source /qemu-${QEMU_VERSION}.tar.xz /qemu-cache/
+
 ENV QEMU_VERSION=${QEMU_VERSION}
-ENV QEMU_GPG_KEY=${QEMU_GPG_KEY}
-RUN --mount=type=cache,target=/qemu-cache,id=qemu-${TARGETARCH}-${QEMU_VERSION} <<EOF
+RUN <<EOF
 CROSS_PREFIX=""
 if [ "$TARGETARCH" != "$BUILDARCH" ]; then
     case "$TARGETARCH" in
