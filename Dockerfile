@@ -1,23 +1,9 @@
 # syntax=docker/dockerfile:1.4
-# Version pins
+# Version pins (used across stages — must be declared before first FROM)
 ARG QEMU_VERSION=10.2.2
 ARG QEMU_GPG_KEY=CEACC9E15534EBABB82D3FA03353C9CEF108B584
-ARG QEMU_RUNTIME_DEPS="libpng16-16 libcurl4"
 ARG PYTHON_VERSION=3.14
 ARG DEBIAN_SUITE=trixie
-
-# Global build arguments (must be re-declared after FROM to use)
-ARG USER=student
-ARG HOME=/home/student
-ARG LOCALE=C.UTF-8
-ARG TZ=Asia/Taipei
-ARG USE_SYSTEMD=no
-ARG USER_PSWD=CHANGE_ME
-ARG USE_USER_PSWD=no
-
-# Repository source
-ARG REPOSOURCE
-ARG IMGDESC
 
 ###############################################
 # Stage 1a: Build QEMU from source
@@ -101,7 +87,6 @@ COPY --from=builder /usr/local/bin/qemu-system-riscv64 /rootfs/usr/local/bin/qem
 COPY --from=builder /usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin /rootfs/usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin
 COPY --from=fixuid-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
 COPY image-configs/tmux.conf /rootfs/etc/tmux.conf
-COPY image-root/ /rootfs/root/
 
 # User-owned files → COPY to ${HOME}
 COPY --from=builder /ble/ /homefs/.local/
@@ -113,61 +98,75 @@ ARG PYTHON_VERSION
 ARG DEBIAN_SUITE
 FROM python:${PYTHON_VERSION}-slim-${DEBIAN_SUITE} AS runner
 
-ARG PYTHON_VERSION
-ARG QEMU_RUNTIME_DEPS
-ARG USER
-ARG HOME
-ARG LOCALE
-ARG TZ
-ARG USE_SYSTEMD
-ARG TARGETARCH
-ARG TARGETPLATFORM
-ARG REPOSOURCE
-ARG IMGDESC
-
-LABEL org.opencontainers.image.architecture="${TARGETARCH}" \
-      org.opencontainers.image.platform="${TARGETPLATFORM}" \
-      org.opencontainers.image.description="${IMGDESC}" \
-      org.opencontainers.image.source="${REPOSOURCE}"
-
 ENV container=docker
 ENV DEBIAN_FRONTEND=noninteractive
+
+USER root
+
+# L0: Binary artifacts (QEMU, fixuid, /etc configs)
+COPY --from=scripts /rootfs/ /
+
+# L1: System utilities + locale
+ARG TARGETARCH
+ARG LOCALE=C.UTF-8
+ARG TZ=Asia/Taipei
+COPY image-root/base/ /root/stage/
+RUN /bin/bash <<EOF
+set -euo pipefail
+for s in /root/stage/*.sh; do . "\$s"; done
+rm -rf /root/stage
+EOF
+
+# Layers ordered by change frequency (least → most volatile).
+# L2: User + fixuid — no dependency on devtools (just useradd/chown from base)
+ARG USER=student
+ARG HOME=/home/student
+COPY image-root/user/ /root/stage/
+RUN /bin/bash <<EOF
+set -euo pipefail
+for s in /root/stage/*.sh; do . "\$s"; done
+rm -rf /root/stage
+EOF
+
+# L3: Systemd (conditional, self-contained)
+ARG USE_SYSTEMD=no
+COPY image-root/systemd/ /root/stage/
+RUN /bin/bash <<EOF
+set -euo pipefail
+for s in /root/stage/*.sh; do . "\$s"; done
+rm -rf /root/stage
+EOF
+
+# L4: Dev tools + QEMU runtime deps + targeted cleanup
+ARG QEMU_RUNTIME_DEPS="libpng16-16 libcurl4"
+COPY image-root/devtools/ /root/stage/
+RUN /bin/bash <<EOF
+set -euo pipefail
+for s in /root/stage/*.sh; do . "\$s"; done
+rm -rf /root/stage
+EOF
+
+# L5: Pip — installs as root (no user dependency) but changes most often
+COPY image-root/pip/ /root/stage/
+RUN /bin/bash <<EOF
+set -euo pipefail
+for s in /root/stage/*.sh; do . "\$s"; done
+rm -rf /root/stage
+EOF
+
+# Runtime ENVs placed late to avoid busting build layer caches
 ENV USER=${USER}
 ENV LC_ALL=${LOCALE}
 ENV LANG=${LOCALE}
 ENV TERM=xterm-256color
 
-USER root
-
-# Copy root-owned files (QEMU binaries, /etc configs)
-COPY --from=scripts /rootfs/ /
-
-# Setup user, install packages, cleanup
-RUN /bin/bash <<EOF
-set -euo pipefail
-case "$TARGETARCH" in
-    amd64) ARCH_TRIPLE="x86_64-linux-gnu" ;;
-    arm64) ARCH_TRIPLE="aarch64-linux-gnu" ;;
-    *)     ARCH_TRIPLE="${TARGETARCH}-linux-gnu" ;;
-esac
-
-# source scripts, orders matter
-. /root/packages.sh
-. /root/locale.sh
-. /root/systemd.sh
-. /root/setup.sh
-. /root/fixuid.sh
-. /root/pip.sh
-. /root/cleanup.sh
-rm -f /root/*.sh
-EOF
-
 USER ${USER}
 WORKDIR ${HOME}
 
-# Copy user-owned files (scripts, ble.sh, oh-my-bash installer)
+# L6: User-owned files (ble.sh, oh-my-bash installer)
 COPY --chown=${USER}:${USER} --from=scripts /homefs/ ${HOME}/
 
+# L7: User shell configuration
 RUN /bin/bash <<EOF
 set -euo pipefail
 echo -e "[\e[1;34mINFO\e[0m] Setup user $USER"
@@ -184,11 +183,21 @@ echo "ls" > $HOME/.bash_history
 echo 'source -- $HOME/.local/share/blesh/ble.sh' >> $HOME/.bashrc
 EOF
 
-ARG USER_PSWD
-ARG USE_USER_PSWD
+# L8: Optional password (most volatile ARGs declared last)
+ARG USER_PSWD=CHANGE_ME
+ARG USE_USER_PSWD=no
 RUN ([ $USE_USER_PSWD = yes ] && \
     echo "${USER}:${USER_PSWD}" | sudo chpasswd) || \
     true
+
+# OCI labels at very end — metadata changes never bust any RUN cache
+ARG TARGETPLATFORM
+ARG REPOSOURCE
+ARG IMGDESC
+LABEL org.opencontainers.image.architecture="${TARGETARCH}" \
+      org.opencontainers.image.platform="${TARGETPLATFORM}" \
+      org.opencontainers.image.description="${IMGDESC}" \
+      org.opencontainers.image.source="${REPOSOURCE}"
 
 ENTRYPOINT ["fixuid", "-q"]
 CMD ["/bin/bash"]

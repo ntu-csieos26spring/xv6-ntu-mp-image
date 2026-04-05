@@ -1,18 +1,20 @@
 #!/bin/sh
 set -euo pipefail
 
+case "$TARGETARCH" in
+    amd64) ARCH_TRIPLE="x86_64-linux-gnu" ;;
+    arm64) ARCH_TRIPLE="aarch64-linux-gnu" ;;
+    *)     ARCH_TRIPLE="${TARGETARCH}-linux-gnu" ;;
+esac
+
 GCC_VERSION="$(gcc -dumpversion | cut -d. -f1)"
 
-apt-get autoremove -y
 apt-get clean
 
 # remove the unused libraries
 rm -rf /tmp/* \
     /var/lib/apt/lists/* \
     /var/tmp/* \
-    /lib/systemd/system/local-fs.target.wants/* \
-    /lib/systemd/system/systemd-update-utmp* \
-    /lib/systemd/system/systemd-resolved.service \
     /usr/share/doc/* \
     /usr/share/info/* \
     /usr/lib/${ARCH_TRIPLE}/libasan* \
