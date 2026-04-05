@@ -33,7 +33,8 @@ print_info "Building QEMU with ${CPU_COUNT} cores..."
             --disable-sdl \
             --disable-opengl \
             --disable-slirp \
-            --disable-kvm
+            --disable-kvm \
+            --audio-drv-list=
 make -j"${CPU_COUNT}"
 make install
 
