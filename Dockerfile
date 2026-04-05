@@ -45,7 +45,8 @@ WORKDIR /
 RUN <<EOF
 apt-get update -qq -y
 apt-get install -qq -y python3 python3-sphinx python3-sphinx-rtd-theme \
-    meson ninja-build pkg-config gawk git make \
+    meson ninja-build pkg-config gawk git make gcc libc6-dev \
+    libglib2.0-dev libpixman-1-dev zlib1g-dev \
     libgnutls28-dev libsasl2-dev libgtk-3-dev libsdl2-dev libepoxy-dev libslirp-dev
 if [ "$TARGETARCH" != "$BUILDARCH" ]; then
     case "$TARGETARCH" in
