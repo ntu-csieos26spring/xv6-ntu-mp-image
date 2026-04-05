@@ -172,7 +172,15 @@ for s in /root/stage/*.sh; do . "\$s"; done
 rm -rf /root/stage
 EOF
 
-# L5: Pip — installs as root (no user dependency) but changes most often
+# L5: RISC-V cross-compiler + debugger + targeted cleanup
+COPY image-root/riscv/ /root/stage/
+RUN /bin/bash <<EOF
+set -euo pipefail
+for s in /root/stage/*.sh; do . "\$s"; done
+rm -rf /root/stage
+EOF
+
+# L6: Pip — installs as root (no user dependency) but changes most often
 COPY image-root/pip/ /root/stage/
 RUN /bin/bash <<EOF
 set -euo pipefail
