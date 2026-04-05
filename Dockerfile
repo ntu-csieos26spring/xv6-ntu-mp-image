@@ -16,6 +16,7 @@ ARG QEMU_VERSION
 ARG QEMU_GPG_KEY
 
 RUN <<EOF
+set -euo pipefail
 apk add --no-cache wget gnupg
 wget -q "https://download.qemu.org/qemu-${QEMU_VERSION}.tar.xz"
 wget -q "https://download.qemu.org/qemu-${QEMU_VERSION}.tar.xz.sig"
@@ -65,7 +66,8 @@ COPY qemu-build/ /scripts/qemu-build
 COPY --from=qemu-source /qemu-${QEMU_VERSION}.tar.xz /qemu-cache/
 
 ENV QEMU_VERSION=${QEMU_VERSION}
-RUN <<EOF
+RUN /bin/bash <<EOF
+set -euo pipefail
 CROSS_PREFIX=""
 if [ "$TARGETARCH" != "$BUILDARCH" ]; then
     case "$TARGETARCH" in
@@ -74,7 +76,7 @@ if [ "$TARGETARCH" != "$BUILDARCH" ]; then
     esac
 fi
 export CROSS_PREFIX
-QEMU_CACHE_DIR=/qemu-cache /scripts/run-with-utils.sh setup_all_plugins_in /scripts/qemu-build
+QEMU_CACHE_DIR=/qemu-cache . /scripts/run-with-utils.sh setup_all_plugins_in /scripts/qemu-build
 EOF
 
 RUN <<EOF
