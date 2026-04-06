@@ -32,4 +32,5 @@ $DOCKER_CMD buildx build \
     --annotation "index:org.opencontainers.image.description=$IMAGE_DESCRIPTION" \
     --annotation "index:org.opencontainers.image.source=$REPOSITORY_SOURCE" \
     "$@" \
-    --push "$REPO_ROOT"
+    --output type=image,compression=zstd,compression-level=10,push=true \
+    "$REPO_ROOT"
