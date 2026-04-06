@@ -38,11 +38,11 @@ if [ -f "$TRIVY_OUTPUT_PATH" ] && [ -f "$GRYPE_OUTPUT_PATH" ]; then
     fi
 fi
 
-# Package the image to OCI directory layout
+# Package the image to tarball
 echo "===Packing Image==="
-rm -rf "$TARBALL_DIR/$FILENAME"
-mkdir -p "$TARBALL_DIR/$FILENAME"
-$DOCKER_CMD save "$IMAGE" | tar -xf - -C "$TARBALL_DIR/$FILENAME"
+rm -f "$TARBALL_DIR/$FILENAME.tar"
+mkdir -p "$TARBALL_DIR/$FILEDIR"
+$DOCKER_CMD save -o "$TARBALL_DIR/$FILENAME.tar" "$IMAGE" 
 
 # Trivy
 echo "===Trivy Analyzing==="
@@ -52,7 +52,7 @@ $DOCKER_CMD run --rm \
   -v "$TRIVY_CACHE":/root/.cache/trivy \
   "docker.io/aquasec/trivy:$TRIVY_IMAGE_TAG" \
   image \
-  --input "/workspace/$FILENAME" \
+  --input "/workspace/$FILENAME.tar" \
   -f sarif \
   -o "/root/.cache/trivy/image-reports/$FILENAME.trivy.sarif"
 
@@ -60,11 +60,12 @@ $DOCKER_CMD run --rm \
 echo "===Grype Analyzing==="
 mkdir -p "$GRYPE_CACHE/image-reports/$FILEDIR"
 
+
 $DOCKER_CMD run --rm \
   -v "$TARBALL_DIR":/workspace:ro,z \
   -v "$GRYPE_CACHE":/.cache/grype \
   "docker.io/anchore/grype:$GRYPE_IMAGE_TAG" \
-  "oci-dir:/workspace/$FILENAME" \
+  "/workspace/$FILENAME.tar" \
   -o sarif \
   --file "/.cache/grype/image-reports/$FILENAME.grype.sarif"
 
