@@ -26,11 +26,11 @@ rm -f "qemu-${QEMU_VERSION}.tar.xz.sig"
 EOF
 
 ###############################################
-# Stage 1a: Build QEMU + shell tools from source
+# Stage 1a: Build QEMU from source
 # Uses debian base (not python:) so PYTHON_VERSION changes don't
 # invalidate the QEMU build cache.
 ###############################################
-FROM --platform=$BUILDPLATFORM debian:${DEBIAN_SUITE} AS builder
+FROM --platform=$BUILDPLATFORM debian:${DEBIAN_SUITE} AS qemu-builder
 
 ARG QEMU_VERSION
 ARG TARGETARCH
@@ -46,7 +46,7 @@ WORKDIR /
 RUN <<EOF
 apt-get update -qq -y
 apt-get install -qq -y python3 python3-venv python3-sphinx python3-sphinx-rtd-theme \
-    meson ninja-build pkg-config gawk git make gcc libc6-dev \
+    meson ninja-build pkg-config gawk gcc libc6-dev \
     libglib2.0-dev libpixman-1-dev zlib1g-dev \
     libgnutls28-dev libsasl2-dev libgtk-3-dev libsdl2-dev libepoxy-dev libslirp-dev
 if [ "$TARGETARCH" != "$BUILDARCH" ]; then
@@ -78,6 +78,18 @@ export CROSS_PREFIX
 QEMU_CACHE_DIR=/qemu-cache . /usr/bin/run-with-utils.sh setup_all_plugins_in /scripts/qemu-build
 EOF
 
+###############################################
+# Stage 1b: Build shell tools (ble.sh, oh-my-bash)
+###############################################
+FROM --platform=$BUILDPLATFORM debian:${DEBIAN_SUITE} AS base-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN <<EOF
+apt-get update -qq -y
+apt-get install -qq -y --no-install-recommends git make gawk
+EOF
+
 RUN <<EOF
 git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git
 mkdir -p /ble
@@ -92,9 +104,9 @@ rm -rf /tmp/oh-my-bash
 EOF
 
 ###############################################
-# Stage 1b: Build fixuid (avoids GitHub CDN)
+# Stage 1c: Build fixuid (avoids GitHub CDN)
 ###############################################
-FROM --platform=$BUILDPLATFORM golang:1-${DEBIAN_SUITE} AS fixuid-builder
+FROM --platform=$BUILDPLATFORM golang:1-${DEBIAN_SUITE} AS go-builder
 ARG TARGETARCH
 ARG DEBIAN_SUITE
 RUN <<EOF
@@ -109,13 +121,13 @@ EOF
 FROM scratch AS scripts
 
 # Root-owned files → COPY to /
-COPY --from=builder /usr/local/bin/qemu-system-riscv64 /rootfs/usr/local/bin/qemu-system-riscv64
-COPY --from=builder /usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin /rootfs/usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin
-COPY --from=fixuid-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
+COPY --from=qemu-builder /usr/local/bin/qemu-system-riscv64 /rootfs/usr/local/bin/qemu-system-riscv64
+COPY --from=qemu-builder /usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin /rootfs/usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin
+COPY --from=go-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
 COPY image-configs/tmux.conf /rootfs/etc/tmux.conf
 
 # User-owned files → COPY to ${HOME}
-COPY --from=builder /ble/ /homefs/.local/
+COPY --from=base-builder /ble/ /homefs/.local/
 
 ###############################################
 # Stage 3: Final slim image
