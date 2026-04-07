@@ -20,7 +20,8 @@ DOCKER_CMD="sudo docker" ./scripts/auth.sh <your-github-username>
 
 This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`.
 
-> **Note:** Every script respects the `DOCKER_CMD` environment variable (defaults to `docker`). You can `export DOCKER_CMD="sudo docker"` (or `"podman"`) once, or set it per-command as shown above.
+> [!NOTE]
+> Every script respects the `DOCKER_CMD` environment variable (defaults to `docker`). You can `export DOCKER_CMD="sudo docker"` (or `"podman"`) once, or set it per-command as shown above.
 
 ### 2. Create your config files
 
@@ -122,15 +123,14 @@ Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
 │   └── screenrc             # GNU Screen configuration (not used in image)
 ├── utils/                   # Shell utility library (logging, pkg helpers, etc.)
 ├── qemu-build/
-│   └── setup.sh             # Downloads, verifies, and compiles QEMU (version from build.conf)
-└── image-root/              # Scripts sourced during the final image setup
-    ├── packages.sh          # Installs runtime APT packages
-    ├── locale.sh            # Configures locale and timezone
-    ├── systemd.sh           # Optional systemd installation
-    ├── setup.sh             # Creates the student user
-    ├── fixuid.sh            # Configures fixuid for UID remapping
-    ├── pip.sh               # Installs Python packages (parse)
-    └── cleanup.sh           # Strips unused libs, caches, etc. to shrink image
+│   └── setup.sh             # Configures and compiles QEMU from a pre-verified tarball
+└── image-root/              # Scripts sourced during the final image layers (ordered by filename)
+    ├── base/                # L1: System utilities, locale, apt cleanup
+    ├── user/                # L2: Student user creation + fixuid setup
+    ├── systemd/             # L3: Optional systemd installation
+    ├── devtools/            # L4: Native dev tools (git, make, gcc) + QEMU runtime deps + cleanup
+    ├── riscv/               # L5: RISC-V cross-compiler, debugger + cleanup
+    └── pip/                 # L6: Python packages (parse)
 ```
 
 ## Vulnerability Analysis
@@ -159,9 +159,13 @@ source ./scripts/add-completions.sh
 
 ## Dockerfile Stages
 
-### Stage 1a -- `builder` (Build QEMU from source)
+### Stage 0 -- `qemu-source` (Download + verify QEMU tarball)
 
-Based on `python:<version>-<suite>`. Compiles QEMU 10.2.2 targeting `riscv64-softmmu` with all GUI/network backends disabled. Supports cross-compilation (e.g. building ARM64 binaries on an AMD64 host) via `CROSS_PREFIX`. Also builds [ble.sh](https://github.com/akinomyoga/ble.sh) and fetches the [oh-my-bash](https://github.com/ohmybash/oh-my-bash) installer.
+A lightweight `alpine:3.23` stage that downloads the QEMU source tarball and verifies its GPG signature. Depends only on `QEMU_VERSION` and the GPG key, so it is fully cached regardless of `DEBIAN_SUITE` or `PYTHON_VERSION` changes.
+
+### Stage 1a -- `builder` (Build QEMU + shell tools from source)
+
+Based on `debian:<suite>` (not `python:`, so Python version changes don't invalidate the QEMU build cache). Installs build dependencies via apt, then compiles QEMU targeting `riscv64-softmmu` with GUI, network, audio, and KVM backends disabled. Supports cross-compilation (e.g. building ARM64 binaries on an AMD64 host) via `CROSS_PREFIX`. Also builds [ble.sh](https://github.com/akinomyoga/ble.sh) and fetches the [oh-my-bash](https://github.com/ohmybash/oh-my-bash) installer.
 
 ### Stage 1b -- `fixuid-builder` (Build fixuid)
 
@@ -171,19 +175,24 @@ Based on `golang:1-<suite>`. Compiles [fixuid](https://github.com/boxboat/fixuid
 
 A `scratch`-based staging area that gathers artifacts from previous stages and the build context into two directory trees:
 
-- `/rootfs/` -- root-owned files: QEMU binary, OpenSBI firmware, fixuid, tmux.conf, and the `image-root/` setup scripts.
+- `/rootfs/` -- root-owned files: QEMU binary, OpenSBI firmware, fixuid, and tmux.conf.
 - `/homefs/` -- user-owned files: ble.sh and oh-my-bash installer.
 
 ### Stage 3 -- `runner` (Final slim image)
 
-Based on `python:<version>-slim-<suite>`. Copies in the two trees from `scripts`, then runs the setup scripts in order:
+Based on `python:<version>-slim-<suite>`. Copies in binaries from `scripts`, then runs setup scripts from `image-root/` subdirectories as separate layers ordered by change frequency (least to most volatile):
 
-1. **packages.sh** -- installs runtime packages (git, make, gcc, gdb-multiarch, RISC-V cross-toolchain, tmux, etc.)
-2. **locale.sh** -- generates locale and sets timezone
-3. **systemd.sh** -- optionally installs systemd (if `USE_SYSTEMD=yes`)
-4. **setup.sh** -- creates the `student` user with passwordless sudo
-5. **fixuid.sh** -- configures fixuid so container UID can match the host user
-6. **pip.sh** -- installs the `parse` Python package
-7. **cleanup.sh** -- aggressively removes unused libs (sanitizers, LTO, docs, etc.) to shrink the image
+- **L0** -- binary artifacts (QEMU, fixuid, /etc configs)
+- **L1** (`base/`) -- system utilities (sudo, tmux, procps), locale, apt cleanup
+- **L2** (`user/`) -- creates the `student` user with passwordless sudo, configures fixuid
+- **L3** (`systemd/`) -- optionally installs systemd (if `USE_SYSTEMD=yes`)
+- **L4** (`devtools/`) -- native dev tools (git, make, gcc) + QEMU runtime deps, then strips sanitizers/LTO/docs
+- **L5** (`riscv/`) -- RISC-V cross-compiler + gdb-multiarch, then strips cross-toolchain bloat
+- **L6** (`pip/`) -- installs the `parse` Python package
+- **L7** -- user shell configuration (gdb safe-path, oh-my-bash, ble.sh)
+- **L8** -- optional user password
 
-Finally, as the `student` user, it sets up gdb safe-path, installs oh-my-bash + ble.sh into `.bashrc`, and optionally sets a user password. The entrypoint is `fixuid -q` so that bind-mounted volumes get correct ownership.
+OCI labels are applied at the very end so metadata changes never bust any RUN cache. The entrypoint is `fixuid -q` so that bind-mounted volumes get correct ownership.
+
+> [!NOTE]
+> GitHub Actions overrides the image entrypoint when using this image as a container in a workflow. The `fixuid` entrypoint will not run in that context, so UID remapping does not apply.
