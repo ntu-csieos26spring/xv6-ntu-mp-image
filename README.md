@@ -163,11 +163,15 @@ source ./scripts/add-completions.sh
 
 A lightweight `alpine:3.23` stage that downloads the QEMU source tarball and verifies its GPG signature. Depends only on `QEMU_VERSION` and the GPG key, so it is fully cached regardless of `DEBIAN_SUITE` or `PYTHON_VERSION` changes.
 
-### Stage 1a -- `builder` (Build QEMU + shell tools from source)
+### Stage 1a -- `qemu-builder` (Build QEMU from source)
 
-Based on `debian:<suite>` (not `python:`, so Python version changes don't invalidate the QEMU build cache). Installs build dependencies via apt, then compiles QEMU targeting `riscv64-softmmu` with GUI, network, audio, and KVM backends disabled. Supports cross-compilation (e.g. building ARM64 binaries on an AMD64 host) via `CROSS_PREFIX`. Also builds [ble.sh](https://github.com/akinomyoga/ble.sh) and fetches the [oh-my-bash](https://github.com/ohmybash/oh-my-bash) installer.
+Based on `debian:<suite>` (not `python:`, so Python version changes don't invalidate the QEMU build cache). Installs build dependencies via apt, then compiles QEMU targeting `riscv64-softmmu` with GUI, network, audio, and KVM backends disabled. Supports cross-compilation (e.g. building ARM64 binaries on an AMD64 host) via `CROSS_PREFIX`.
 
-### Stage 1b -- `fixuid-builder` (Build fixuid)
+### Stage 1b -- `base-builder` (Build shell tools)
+
+Based on `debian:<suite>`. Builds [ble.sh](https://github.com/akinomyoga/ble.sh) and fetches the [oh-my-bash](https://github.com/ohmybash/oh-my-bash) installer. Runs in parallel with the other builder stages.
+
+### Stage 1c -- `go-builder` (Build fixuid)
 
 Based on `golang:1-<suite>`. Compiles [fixuid](https://github.com/boxboat/fixuid) v0.6.0 as a static binary for the target architecture. This avoids downloading from GitHub CDN at runtime.
 
