@@ -87,7 +87,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN <<EOF
 apt-get update -qq -y
-apt-get install -qq -y --no-install-recommends git make gawk
+apt-get install -qq -y --no-install-recommends git make gawk ca-certificates
 EOF
 
 RUN <<EOF
