@@ -90,44 +90,46 @@ apt-get update -qq -y
 apt-get install -qq -y --no-install-recommends git make gawk ca-certificates
 EOF
 
+# ble.sh
 RUN <<EOF
 git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git
 mkdir -p /ble
 make -C ble.sh install PREFIX=/ble
 EOF
 
-# smuggle the install script (clone avoids raw.githubusercontent.com which may be blocked)
+# oh-my-bash
 RUN <<EOF
-git clone --depth 1 https://github.com/ohmybash/oh-my-bash.git /tmp/oh-my-bash
-cp /tmp/oh-my-bash/tools/install.sh /ble/omb-install.sh
-rm -rf /tmp/oh-my-bash
+git clone --depth 1 https://github.com/ohmybash/oh-my-bash.git /oh-my-bash
 EOF
 
 ###############################################
 # Stage 1c: Build fixuid (avoids GitHub CDN)
 ###############################################
-FROM --platform=$BUILDPLATFORM golang:1-${DEBIAN_SUITE} AS go-builder
-ARG TARGETARCH
-ARG DEBIAN_SUITE
-RUN <<EOF
-GOOS=linux GOARCH=${TARGETARCH} CGO_ENABLED=0 \ 
-go install github.com/boxboat/fixuid@v0.6.0
-find /go/bin -name fixuid -exec install -m 0755 {} /usr/local/bin/fixuid \;
-EOF
+#FROM --platform=$BUILDPLATFORM golang:1-${DEBIAN_SUITE} AS go-builder
+#ARG TARGETARCH
+#ARG DEBIAN_SUITE
+#RUN <<EOF
+#GOOS=linux GOARCH=${TARGETARCH} CGO_ENABLED=0 \ 
+#go install github.com/boxboat/fixuid@v0.6.0
+#find /go/bin -name fixuid -exec install -m 0755 {} /usr/local/bin/fixuid \;
+#EOF
 
 ###############################################
 # Stage 2: Cherry-pick runtime scripts
 ###############################################
-FROM scratch AS scripts
+FROM scratch AS storage
 
 # Root-owned files → COPY to /
 COPY --from=qemu-builder /usr/local/bin/qemu-system-riscv64 /rootfs/usr/local/bin/qemu-system-riscv64
 COPY --from=qemu-builder /usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin /rootfs/usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin
-COPY --from=go-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
+#COPY --from=go-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
 COPY image-configs/tmux.conf /rootfs/etc/tmux.conf
+COPY image-root/ /rootfs/root/
 
 # User-owned files → COPY to ${HOME}
 COPY --from=base-builder /ble/ /homefs/.local/
+COPY --from=base-builder /oh-my-bash/ /homefs/.oh-my-bash/
+COPY image-home/ /homefs/
 
 ###############################################
 # Stage 3: Final slim image
@@ -142,13 +144,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 USER root
 
 # L0: Binary artifacts (QEMU, fixuid, /etc configs)
-COPY --from=scripts /rootfs/ /
+COPY --from=storage /rootfs/usr/ /usr/
+COPY --from=storage /rootfs/etc/ /etc/
 
 # L1: System utilities + locale
 ARG TARGETARCH
 ARG LOCALE=C.UTF-8
 ARG TZ=Asia/Taipei
-COPY image-root/base/ /root/stage/
+COPY --from=storage /rootfs/root/base/ /root/stage/
 RUN /bin/bash <<EOF
 set -euo pipefail
 for s in /root/stage/*.sh; do . "\$s"; done
@@ -159,7 +162,7 @@ EOF
 # L2: User + fixuid — no dependency on devtools (just useradd/chown from base)
 ARG USER=student
 ARG HOME=/home/student
-COPY image-root/user/ /root/stage/
+COPY --from=storage /rootfs/root/user/ /root/stage/
 RUN /bin/bash <<EOF
 set -euo pipefail
 for s in /root/stage/*.sh; do . "\$s"; done
@@ -169,6 +172,7 @@ EOF
 # L3: Systemd (conditional, self-contained)
 ARG USE_SYSTEMD=no
 COPY image-root/systemd/ /root/stage/
+COPY --from=storage /rootfs/root/systemd/ /root/stage/
 RUN /bin/bash <<EOF
 set -euo pipefail
 for s in /root/stage/*.sh; do . "\$s"; done
@@ -176,8 +180,8 @@ rm -rf /root/stage
 EOF
 
 # L4: Dev tools + QEMU runtime deps + targeted cleanup
-ARG QEMU_RUNTIME_DEPS="libpng16-16 libcurl4"
-COPY image-root/devtools/ /root/stage/
+ARG QEMU_RUNTIME_DEPS
+COPY --from=storage /rootfs/root/devtools/ /root/stage/
 RUN /bin/bash <<EOF
 set -euo pipefail
 for s in /root/stage/*.sh; do . "\$s"; done
@@ -185,7 +189,7 @@ rm -rf /root/stage
 EOF
 
 # L5: RISC-V cross-compiler + debugger + targeted cleanup
-COPY image-root/riscv/ /root/stage/
+COPY --from=storage /rootfs/root/riscv/ /root/stage/
 RUN /bin/bash <<EOF
 set -euo pipefail
 for s in /root/stage/*.sh; do . "\$s"; done
@@ -193,7 +197,7 @@ rm -rf /root/stage
 EOF
 
 # L6: Pip — installs as root (no user dependency) but changes most often
-COPY image-root/pip/ /root/stage/
+COPY --from=storage /rootfs/root/pip/ /root/stage/
 RUN /bin/bash <<EOF
 set -euo pipefail
 for s in /root/stage/*.sh; do . "\$s"; done
@@ -209,25 +213,12 @@ ENV TERM=xterm-256color
 USER ${USER}
 WORKDIR ${HOME}
 
-# L6: User-owned files (ble.sh, oh-my-bash installer)
+# L6: User-owned files
 COPY --chown=${USER}:${USER} --from=scripts /homefs/ ${HOME}/
 
 # L7: User shell configuration
-RUN /bin/bash <<EOF
-set -euo pipefail
-echo -e "[\e[1;34mINFO\e[0m] Setup user $USER"
-# gdb safe-path
-mkdir -p $HOME/.config/gdb
-echo "add-auto-load-safe-path $HOME/xv6/.gdbinit" > $HOME/.config/gdb/gdbinit
-# script installation
-bash $HOME/.local/omb-install.sh
-sed -i 's/^OSH_THEME=.*/OSH_THEME="vscode"/' $HOME/.bashrc
-sed -i '/^completions=(/,/^)/c\completions=(\n  git\n  pip3\n  tmux\n  makefile\n)' $HOME/.bashrc
-rm $HOME/.local/omb-install.sh
-# fake history to prevent "no history hang"
-echo "ls" > $HOME/.bash_history
-echo 'source -- $HOME/.local/share/blesh/ble.sh' >> $HOME/.bashrc
-EOF
+#RUN /bin/bash <<EOF
+#EOF
 
 # L8: Optional password (most volatile ARGs declared last)
 ARG USER_PSWD=CHANGE_ME
@@ -245,5 +236,5 @@ LABEL org.opencontainers.image.architecture="${TARGETARCH}" \
       org.opencontainers.image.description="${IMGDESC}" \
       org.opencontainers.image.source="${REPOSOURCE}"
 
-ENTRYPOINT ["fixuid", "-q"]
+#ENTRYPOINT ["fixuid", "-q"]
 CMD ["/bin/bash"]
