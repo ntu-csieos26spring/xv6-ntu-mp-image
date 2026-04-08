@@ -132,9 +132,6 @@ source "$OSH"/oh-my-bash.sh
 # User configuration
 # export MANPATH="/usr/local/man:$MANPATH"
 
-# Ensure 256 color support
-export TERM="${TERM:-xterm-256color}"
-
 
 # Preferred editor for local and remote sessions
 # if [[ -n $SSH_CONNECTION ]]; then
