@@ -1,0 +1,2 @@
+# Force 256 color support
+bleopt term_colors=256

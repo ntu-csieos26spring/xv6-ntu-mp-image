@@ -132,6 +132,9 @@ source "$OSH"/oh-my-bash.sh
 # User configuration
 # export MANPATH="/usr/local/man:$MANPATH"
 
+# Ensure 256 color support
+export TERM="${TERM:-xterm-256color}"
+
 # You may need to manually set your language environment
 export LANG=C.UTF-8
 
