@@ -1,1 +1,1 @@
-add-auto-load-safe-path $HOME/xv6/.gdbinit
+add-auto-load-safe-path ~/xv6/.gdbinit
