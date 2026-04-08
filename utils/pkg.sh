@@ -31,7 +31,7 @@ remove_if_exist() {
     use_pkg_mgr
     
     for item in "$@"; do
-        if ! [[ -z $(sudo $PKG_CHECK_INSTALLED 2>/dev/null) ]]
+        if ! [[ -z $(sudo $PKG_CHECK_INSTALLED $item 2>/dev/null) ]]
         then
             print_info "$item exist, uninstall it..."
             sudo $PKG_REMOVE $item > /dev/null

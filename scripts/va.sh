@@ -71,13 +71,13 @@ $DOCKER_CMD run --rm \
 
 # Parse the SARIF file to OUTPUT_FORMAT
 echo "===Outputting==="
-if [ ! -d "$REPO_ROOT/.venv" ]; then
+if [ ! -d "$REPO_ROOT/image-va" ]; then
     uv venv "$REPO_ROOT/image-va" --python 3.11
     uv pip install sarif-tools
 fi
 
 # shellcheck source=/dev/null
-source "$REPO_ROOT/.venv/bin/activate"
+source "$REPO_ROOT/image-va/bin/activate"
 mkdir -p "$OUTPUT_DIR/$FILEDIR"
 sarif $OUTPUT_FORMAT -o "$TRIVY_OUTPUT_PATH" "${SARIF_OUTPUT_OPTION[@]}" "$TRIVY_CACHE/image-reports/$FILENAME.trivy.sarif"
 sarif $OUTPUT_FORMAT -o "$GRYPE_OUTPUT_PATH" "${SARIF_OUTPUT_OPTION[@]}" "$GRYPE_CACHE/image-reports/$FILENAME.grype.sarif"

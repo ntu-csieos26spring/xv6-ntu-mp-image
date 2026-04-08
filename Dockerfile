@@ -171,7 +171,6 @@ EOF
 
 # L3: Systemd (conditional, self-contained)
 ARG USE_SYSTEMD=no
-COPY image-root/systemd/ /root/stage/
 COPY --from=storage /rootfs/root/systemd/ /root/stage/
 RUN /bin/bash <<EOF
 set -euo pipefail
@@ -211,14 +210,14 @@ ENV LANG=${LOCALE}
 USER ${USER}
 WORKDIR ${HOME}
 
-# L6: User-owned files
+# L7: User-owned files
 COPY --chown=${USER}:${USER} --from=storage /homefs/ ${HOME}/
 
-# L7: User shell configuration
+# L8: User shell configuration
 #RUN /bin/bash <<EOF
 #EOF
 
-# L8: Optional password (most volatile ARGs declared last)
+# L9: Optional password (most volatile ARGs declared last)
 ARG USER_PSWD=CHANGE_ME
 ARG USE_USER_PSWD=no
 RUN ([ $USE_USER_PSWD = yes ] && \
