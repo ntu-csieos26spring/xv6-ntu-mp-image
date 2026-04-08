@@ -217,7 +217,7 @@ WORKDIR ${HOME}
 COPY --chown=${USER}:${USER} --from=storage /homefs/ ${HOME}/
 
 # L7: User shell configuration — pre-warm ble.sh tput cache
-RUN TERM=xterm-256color bash -c 'source "$HOME/.local/share/blesh/ble.sh" --noattach; ble-detach'
+RUN TERM=xterm-256color bash -c 'source "$HOME/.local/share/blesh/ble.sh" --noattach'
 
 # L8: Optional password (most volatile ARGs declared last)
 ARG USER_PSWD=CHANGE_ME
