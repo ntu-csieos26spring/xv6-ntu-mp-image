@@ -214,7 +214,7 @@ USER ${USER}
 WORKDIR ${HOME}
 
 # L6: User-owned files
-COPY --chown=${USER}:${USER} --from=scripts /homefs/ ${HOME}/
+COPY --chown=${USER}:${USER} --from=storage /homefs/ ${HOME}/
 
 # L7: User shell configuration
 #RUN /bin/bash <<EOF
