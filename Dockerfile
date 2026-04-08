@@ -105,14 +105,14 @@ EOF
 ###############################################
 # Stage 1c: Build fixuid (avoids GitHub CDN)
 ###############################################
-#FROM --platform=$BUILDPLATFORM golang:1-${DEBIAN_SUITE} AS go-builder
-#ARG TARGETARCH
-#ARG DEBIAN_SUITE
-#RUN <<EOF
-#GOOS=linux GOARCH=${TARGETARCH} CGO_ENABLED=0 \ 
-#go install github.com/boxboat/fixuid@v0.6.0
-#find /go/bin -name fixuid -exec install -m 0755 {} /usr/local/bin/fixuid \;
-#EOF
+FROM --platform=$BUILDPLATFORM golang:1-${DEBIAN_SUITE} AS go-builder
+ARG TARGETARCH
+ARG DEBIAN_SUITE
+RUN <<EOF
+GOOS=linux GOARCH=${TARGETARCH} CGO_ENABLED=0 \ 
+go install github.com/boxboat/fixuid@v0.6.0
+find /go/bin -name fixuid -exec install -m 0755 {} /usr/local/bin/fixuid \;
+EOF
 
 ###############################################
 # Stage 2: Cherry-pick runtime scripts
@@ -122,7 +122,7 @@ FROM scratch AS storage
 # Root-owned files → COPY to /
 COPY --from=qemu-builder /usr/local/bin/qemu-system-riscv64 /rootfs/usr/local/bin/qemu-system-riscv64
 COPY --from=qemu-builder /usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin /rootfs/usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin
-#COPY --from=go-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
+COPY --from=go-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
 COPY image-configs/tmux.conf /rootfs/etc/tmux.conf
 COPY image-root/ /rootfs/root/
 
@@ -217,8 +217,9 @@ WORKDIR ${HOME}
 COPY --chown=${USER}:${USER} --from=storage /homefs/ ${HOME}/
 
 # L7: User shell configuration
-#RUN /bin/bash <<EOF
-#EOF
+RUN /bin/bash <<EOF
+rmdir ${HOME}/scripts
+EOF
 
 # L8: Optional password (most volatile ARGs declared last)
 ARG USER_PSWD=CHANGE_ME
@@ -236,5 +237,5 @@ LABEL org.opencontainers.image.architecture="${TARGETARCH}" \
       org.opencontainers.image.description="${IMGDESC}" \
       org.opencontainers.image.source="${REPOSOURCE}"
 
-#ENTRYPOINT ["fixuid", "-q"]
+ENTRYPOINT ["fixuid", "-q"]
 CMD ["/bin/bash"]
