@@ -217,9 +217,8 @@ WORKDIR ${HOME}
 COPY --chown=${USER}:${USER} --from=storage /homefs/ ${HOME}/
 
 # L7: User shell configuration
-RUN /bin/bash <<EOF
-rmdir ${HOME}/scripts
-EOF
+#RUN /bin/bash <<EOF
+#EOF
 
 # L8: Optional password (most volatile ARGs declared last)
 ARG USER_PSWD=CHANGE_ME
