@@ -25,7 +25,7 @@ $PODMAN_CMD --connection "$CONNECTION_NAME" info --format '{{.Host.Arch}}'
 
 # Create farm with local + remote nodes
 $PODMAN_CMD farm create "$FARM_NAME"
-$PODMAN_CMD farm add "$FARM_NAME" "$CONNECTION_NAME"
+$PODMAN_CMD farm update --add "$CONNECTION_NAME" "$FARM_NAME"
 
 echo "Farm '$FARM_NAME' is ready."
 $PODMAN_CMD farm list
