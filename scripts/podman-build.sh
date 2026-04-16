@@ -22,10 +22,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/podman-detect.sh"
 BASE="$ORGANIZATION/$IMAGE_NAME"
 LATEST="$BASE:latest"
 
-# podman farm build does not support custom tags; build as :latest without pushing
+# podman farm build does not support custom tags; build and push as :latest first
 $PODMAN_CMD farm build \
     --farm "$FARM_NAME" \
-    --local-only \
     -t "$LATEST" \
     --build-arg "REPOSOURCE=$REPOSITORY_SOURCE" \
     --build-arg "IMGDESC=$IMAGE_DESCRIPTION" \
@@ -73,8 +72,11 @@ while IFS= read -r line; do
     fi
 done <<< "$MANIFEST_JSON"
 
-# Push all images
-$PODMAN_CMD manifest push --all "$TAG" "docker://$TAG"
+# Push re-tagged manifest and arch-specific images
+# (:latest is already pushed by farm build)
+if [ "$IMAGE_TAG" != "latest" ]; then
+    $PODMAN_CMD manifest push --all "$TAG" "docker://$TAG"
+fi
 for ARCH_TAG in "${ARCH_TAGS[@]}"; do
     $PODMAN_CMD push "$ARCH_TAG" "docker://$ARCH_TAG"
 done
