@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-## Podman remote connection setup ##
+## Podman remote connection + farm setup ##
+
+# Farm name used by `podman farm`
+FARM_NAME="cluster"
 
 # Connection name used by `podman system connection`
 CONNECTION_NAME="slave"
@@ -10,7 +13,3 @@ SLAVE_USER="your-username"
 SLAVE_HOST="10.2.15.142"
 SLAVE_SSH_KEY="$HOME/.ssh/id_rsa"
 SLAVE_PODMAN_SOCKET="/run/user/1000/podman/podman.sock"
-
-# Check the arch with `uname -m`
-MASTER_PLATFORM="linux/amd64"
-SLAVE_PLATFORM="linux/arm64"

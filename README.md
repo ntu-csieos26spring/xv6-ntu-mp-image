@@ -65,11 +65,11 @@ On the **remote (slave) node**, start the podman API socket (or enable `podman.s
 ./scripts/podman-build-remote-fg.sh
 ```
 
-On the **master node**, add the SSH connection and build:
+On the **master node**, create the farm and build:
 
 ```bash
-./scripts/podman-build-setup.sh          # reads configs/podman-remote.conf, adds SSH connection
-./scripts/podman-build.sh                # reads configs/build.conf + podman-remote.conf, builds natively on each node, then pushes manifest
+./scripts/podman-build-setup.sh          # reads configs/podman-remote.conf, adds SSH connection + creates farm
+./scripts/podman-build.sh                # reads configs/build.conf + podman-remote.conf, builds in parallel via podman farm
 ```
 
 #### Option B: Local build (single machine)
@@ -128,13 +128,12 @@ Only needed for distributed Podman builds (`podman-build-setup.sh` / `podman-bui
 
 | Variable | Description | Default |
 |---|---|---|
+| `FARM_NAME` | Name for `podman farm` | `cluster` |
 | `CONNECTION_NAME` | Name for `podman system connection` | `slave` |
 | `SLAVE_USER` | SSH username on the remote node | |
 | `SLAVE_HOST` | IP of the slave (remote) machine | |
 | `SLAVE_SSH_KEY` | Path to SSH private key | `$HOME/.ssh/id_rsa` |
 | `SLAVE_PODMAN_SOCKET` | Path to podman socket on the remote | `/run/user/1000/podman/podman.sock` |
-| `MASTER_PLATFORM` | Platform of master node (`linux/amd64` or `linux/arm64`) | `linux/amd64` |
-| `SLAVE_PLATFORM` | Platform of slave node | `linux/arm64` |
 
 ## Project Structure
 
@@ -150,9 +149,9 @@ Only needed for distributed Podman builds (`podman-build-setup.sh` / `podman-bui
 │   ├── docker-build.sh            # Builds and pushes via the cluster builder (distributed)
 │   ├── docker-build-local.sh      # Builds and pushes on a single machine (slow, emulated)
 │   ├── podman-detect.sh           # Auto-detects whether podman needs sudo
-│   ├── podman-build-setup.sh     # Adds SSH connection to remote node (distributed)
+│   ├── podman-build-setup.sh     # Adds SSH connection + creates podman farm (distributed)
 │   ├── podman-build-remote-fg.sh # Starts podman API socket on the remote node (distributed)
-│   ├── podman-build.sh           # Builds natively on each node, pushes manifest (distributed)
+│   ├── podman-build.sh           # Builds in parallel via podman farm (distributed)
 │   ├── podman-build-local.sh     # Builds and pushes manifest on a single machine (slow, emulated)
 │   ├── va.sh                # Vulnerability analysis with Trivy + Grype
 │   ├── add-completions.sh   # Loads shell completions for va.sh into the current session
@@ -161,7 +160,7 @@ Only needed for distributed Podman builds (`podman-build-setup.sh` / `podman-bui
 ├── configs/                 # Build configuration templates
 │   ├── build.conf.template         # Template for image build configuration
 │   ├── remote.conf.template        # Template for distributed BuildKit cluster setup (Docker)
-│   └── podman-remote.conf.template # Template for distributed SSH connection setup (Podman)
+│   └── podman-remote.conf.template # Template for distributed podman farm setup
 ├── image-configs/           # Configuration files baked into the image
 │   ├── tmux.conf            # tmux configuration baked into /etc/tmux.conf
 │   └── screenrc             # GNU Screen configuration (not used in image)
