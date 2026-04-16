@@ -25,7 +25,7 @@ LATEST="$BASE:latest"
 # podman farm build does not support custom tags; build and push as :latest first
 $PODMAN_CMD farm build \
     --farm "$FARM_NAME" \
-    -t "$LATEST" \
+    -t "$BASE" \
     --build-arg "REPOSOURCE=$REPOSITORY_SOURCE" \
     --build-arg "IMGDESC=$IMAGE_DESCRIPTION" \
     --build-arg "QEMU_VERSION=$QEMU_VERSION" \
