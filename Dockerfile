@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.4
 # Version pins (used across stages — must be declared before first FROM)
 ARG QEMU_VERSION=10.2.2
 ARG QEMU_GPG_KEY=CEACC9E15534EBABB82D3FA03353C9CEF108B584

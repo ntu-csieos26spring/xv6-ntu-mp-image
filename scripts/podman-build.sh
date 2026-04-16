@@ -36,12 +36,17 @@ BUILD_ARGS=(
 # Build and push master platform (local)
 echo "=== Building $MASTER_PLATFORM (local) ==="
 $PODMAN_CMD build --platform "$MASTER_PLATFORM" \
+    --build-arg "BUILDPLATFORM=$MASTER_PLATFORM" \
+    --build-arg "BUILDARCH=$MASTER_ARCH" \
     -t "$TAG-$MASTER_ARCH" "${BUILD_ARGS[@]}" "$@" "$REPO_ROOT"
 $PODMAN_CMD push "$TAG-$MASTER_ARCH"
 
 # Build and push slave platform (remote)
+# BUILDPLATFORM = slave's native platform since the build runs on the slave
 echo "=== Building $SLAVE_PLATFORM (remote: $CONNECTION_NAME) ==="
 $PODMAN_CMD --connection "$CONNECTION_NAME" build --platform "$SLAVE_PLATFORM" \
+    --build-arg "BUILDPLATFORM=$SLAVE_PLATFORM" \
+    --build-arg "BUILDARCH=$SLAVE_ARCH" \
     -t "$TAG-$SLAVE_ARCH" "${BUILD_ARGS[@]}" "$@" "$REPO_ROOT"
 $PODMAN_CMD --connection "$CONNECTION_NAME" push "$TAG-$SLAVE_ARCH"
 

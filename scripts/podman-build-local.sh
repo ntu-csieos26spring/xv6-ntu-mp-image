@@ -25,10 +25,18 @@ source "$(dirname "${BASH_SOURCE[0]}")/podman-detect.sh"
 
 TAG="$ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG"
 
+case "$(uname -m)" in
+    x86_64)  BUILDARCH="amd64" ;;
+    aarch64) BUILDARCH="arm64" ;;
+    *)       BUILDARCH="$(uname -m)" ;;
+esac
+
 $PODMAN_CMD manifest rm "$TAG" 2>/dev/null || true
 $PODMAN_CMD build \
     --platform linux/amd64,linux/arm64 \
     --manifest "$TAG" \
+    --build-arg "BUILDPLATFORM=linux/$BUILDARCH" \
+    --build-arg "BUILDARCH=$BUILDARCH" \
     --build-arg "REPOSOURCE=$REPOSITORY_SOURCE" \
     --build-arg "IMGDESC=$IMAGE_DESCRIPTION" \
     --build-arg "QEMU_VERSION=$QEMU_VERSION" \
