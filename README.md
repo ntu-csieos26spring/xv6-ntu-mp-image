@@ -6,7 +6,7 @@ A multi-architecture Docker image for NTU xv6 machine problems. Builds a slim, s
 
 ### Prerequisites
 
-- Docker (or Podman) with BuildKit support
+- Docker with BuildKit support
 - [GitHub CLI (`gh`)](https://cli.github.com/) for authentication
 - A remote ARM64 machine (if building multi-arch)
 
@@ -14,14 +14,12 @@ A multi-architecture Docker image for NTU xv6 machine problems. Builds a slim, s
 
 ```bash
 ./scripts/auth.sh <your-github-username>
-# or, if Docker requires root:
-DOCKER_CMD="sudo docker" ./scripts/auth.sh <your-github-username>
 ```
 
 This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`.
 
 > [!NOTE]
-> Every script respects the `DOCKER_CMD` environment variable (defaults to `docker`). You can `export DOCKER_CMD="sudo docker"` (or `"podman"`) once, or set it per-command as shown above.
+> Every script auto-detects whether `sudo` is needed for Docker (via `docker info`). The build scripts use `docker buildx`, which is not compatible with Podman.
 
 ### 2. Create your config files
 
@@ -39,30 +37,30 @@ There are two ways to produce the multi-arch image:
 
 #### Option A: Distributed build (recommended)
 
-The `buildx-setup.sh` / `buildx.sh` scripts dispatch each platform to a **native** machine so nothing is emulated. This requires two machines -- one per architecture.
+The `docker-build-setup.sh` / `docker-build.sh` scripts dispatch each platform to a **native** machine so nothing is emulated. This requires two machines -- one per architecture.
 
 On the **remote (slave) node**, start a BuildKit daemon in the foreground:
 
 ```bash
-./scripts/buildx-remote-fg.sh      # reads configs/remote.conf
+./scripts/docker-build-remote-fg.sh      # reads configs/remote.conf
 ```
 
 On the **master node**, create the multi-node builder and kick off the build:
 
 ```bash
-./scripts/buildx-setup.sh          # reads configs/remote.conf, creates cluster-builder
-./scripts/buildx.sh                # reads configs/build.conf, builds both platforms natively, then pushes
+./scripts/docker-build-setup.sh          # reads configs/remote.conf, creates cluster-builder
+./scripts/docker-build.sh                # reads configs/build.conf, builds both platforms natively, then pushes
 ```
 
 #### Option B: Local build (single machine)
 
-If you only have one machine, `buildx-local.sh` builds both platforms locally using the default builder. The non-native platform is emulated via QEMU userspace emulation, which is **significantly slower**.
+If you only have one machine, `docker-build-local.sh` builds both platforms locally using the default builder. The non-native platform is emulated via QEMU userspace emulation, which is **significantly slower**.
 
 ```bash
-./scripts/buildx-local.sh
+./scripts/docker-build-local.sh
 ```
 
-Both `buildx.sh` and `buildx-local.sh` accept `-c <config>` to override the config file (defaults to `configs/build.conf`). Any remaining arguments are forwarded to `docker buildx build` (e.g. `--no-cache`). `buildx-setup.sh` and `buildx-remote-fg.sh` accept an optional config path argument and default to `configs/remote.conf`.
+Both `docker-build.sh` and `docker-build-local.sh` accept `-c <config>` to override the config file (defaults to `configs/build.conf`). Any remaining arguments are forwarded to `docker buildx build` (e.g. `--no-cache`). `docker-build-setup.sh` and `docker-build-remote-fg.sh` accept an optional config path argument and default to `configs/remote.conf`.
 
 ## Configuration
 
@@ -88,7 +86,7 @@ Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
 
 ### `configs/remote.conf` (distributed BuildKit cluster)
 
-Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
+Only needed for distributed builds (`docker-build-setup.sh` / `docker-build-remote-fg.sh`).
 
 | Variable | Description | Default |
 |---|---|---|
@@ -107,10 +105,11 @@ Only needed for distributed builds (`buildx-setup.sh` / `buildx-remote-fg.sh`).
 ├── run-with-utils.sh        # Loader that sources utils/ then runs a command
 ├── scripts/                 # Executable scripts
 │   ├── auth.sh              # GitHub + GHCR login helper
-│   ├── buildx-setup.sh      # Creates the multi-node BuildKit cluster (distributed)
-│   ├── buildx-remote-fg.sh  # Runs BuildKit on the remote slave node (distributed)
-│   ├── buildx.sh            # Builds and pushes via the cluster builder (distributed)
-│   ├── buildx-local.sh      # Builds and pushes on a single machine (slow, emulated)
+│   ├── docker-detect.sh            # Auto-detects whether docker needs sudo
+│   ├── docker-build-setup.sh      # Creates the multi-node BuildKit cluster (distributed)
+│   ├── docker-build-remote-fg.sh  # Runs BuildKit on the remote slave node (distributed)
+│   ├── docker-build.sh            # Builds and pushes via the cluster builder (distributed)
+│   ├── docker-build-local.sh      # Builds and pushes on a single machine (slow, emulated)
 │   ├── va.sh                # Vulnerability analysis with Trivy + Grype
 │   ├── add-completions.sh   # Loads shell completions for va.sh into the current session
 │   ├── va.complete.bash     # Bash completions for va.sh

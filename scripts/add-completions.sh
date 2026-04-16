@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-DOCKER_CMD="${DOCKER_CMD:-docker}"
+source "$(dirname "${BASH_SOURCE[0]}")/docker-detect.sh"
 
 CURRENT_SHELL="$(basename "$SHELL")"
 # Get the directory where THIS wrapper script lives

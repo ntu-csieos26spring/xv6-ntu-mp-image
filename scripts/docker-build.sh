@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cat <<'WARN'
-WARNING: Building multi-arch locally uses QEMU userspace emulation for the
-non-native platform. This is significantly slower than native compilation.
-Consider using the distributed build (buildx-setup.sh + buildx.sh) if you
-have access to machines of both architectures.
-WARN
+export DOCKER_CLIENT_TIMEOUT=300
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="$REPO_ROOT/configs/build.conf"
@@ -17,14 +12,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Usage: ./scripts/buildx-local.sh [-c config] [docker-options...]"
+    echo "Usage: ./scripts/docker-build.sh [-c config] [docker-options...]"
     exit 1
 fi
 source "$CONFIG_FILE"
 
+source "$(dirname "${BASH_SOURCE[0]}")/docker-detect.sh"
 $DOCKER_CMD buildx build \
+    --builder cluster-builder \
     --platform linux/amd64,linux/arm64 \
-    -t "$ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG" \
+    -t "$ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG"\
     --build-arg "REPOSOURCE=$REPOSITORY_SOURCE" \
     --build-arg "IMGDESC=$IMAGE_DESCRIPTION" \
     --build-arg "QEMU_VERSION=$QEMU_VERSION" \

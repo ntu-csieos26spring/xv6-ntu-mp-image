@@ -6,12 +6,12 @@ export DOCKER_CLIENT_TIMEOUT=300
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="${1:-$REPO_ROOT/configs/remote.conf}"
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Usage: [DOCKER_CMD=\"sudo docker\"] ./scripts/buildx-setup.sh [remote.conf]"
+    echo "Usage: ./scripts/docker-build-setup.sh [remote.conf]"
     exit 1
 fi
 source "$CONFIG_FILE"
 
-DOCKER_CMD="${DOCKER_CMD:-docker}"
+source "$(dirname "${BASH_SOURCE[0]}")/docker-detect.sh"
 # remove the existing things
 $DOCKER_CMD buildx rm cluster-builder > /dev/null 2>&1 || true
 

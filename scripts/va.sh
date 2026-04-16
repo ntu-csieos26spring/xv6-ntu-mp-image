@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-DOCKER_CMD="${DOCKER_CMD:-docker}"
+source "$(dirname "${BASH_SOURCE[0]}")/docker-detect.sh"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [ $# != 1 ]; then
-	echo 'Usage: [DOCKER_CMD="sudo docker"] ./scripts/va.sh <[organization/]image[:tag]>'
+	echo 'Usage: ./scripts/va.sh <[organization/]image[:tag]>'
 	exit 1
 fi
 
