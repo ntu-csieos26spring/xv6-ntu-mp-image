@@ -6,7 +6,7 @@ A multi-architecture Docker image for NTU xv6 machine problems. Builds a slim, s
 
 ### Prerequisites
 
-- Docker with BuildKit support
+- Docker (with BuildKit) or Podman
 - [GitHub CLI (`gh`)](https://cli.github.com/) for authentication
 - A remote ARM64 machine (if building multi-arch)
 
@@ -16,28 +16,33 @@ A multi-architecture Docker image for NTU xv6 machine problems. Builds a slim, s
 ./scripts/auth.sh <your-github-username>
 ```
 
-This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`.
+This logs you into GitHub via `gh` and pipes a token to `docker login ghcr.io`. For Podman, log in directly with `podman login ghcr.io`.
 
 > [!NOTE]
-> Every script auto-detects whether `sudo` is needed for Docker (via `docker info`). The build scripts use `docker buildx`, which is not compatible with Podman.
+> Every script auto-detects whether `sudo` is needed (via `docker info` / `podman info`). There are separate script sets for Docker (`docker-build-*`) and Podman (`podman-build-*`).
 
 ### 2. Create your config files
 
 ```bash
 cp configs/build.conf.template configs/build.conf       # image settings (always needed)
-cp configs/remote.conf.template configs/remote.conf     # remote BuildKit cluster (distributed builds only)
-# Edit both to match your environment
+# For distributed Docker builds:
+cp configs/remote.conf.template configs/remote.conf     # remote BuildKit cluster
+# For distributed Podman builds:
+cp configs/podman-remote.conf.template configs/podman-remote.conf  # remote SSH connection
+# Edit to match your environment
 ```
 
 See [Configuration](#configuration) below.
 
 ### 3. Build and push
 
-There are two ways to produce the multi-arch image:
+There are two ways to produce the multi-arch image (distributed or local), with separate script sets for Docker and Podman.
 
 #### Option A: Distributed build (recommended)
 
-The `docker-build-setup.sh` / `docker-build.sh` scripts dispatch each platform to a **native** machine so nothing is emulated. This requires two machines -- one per architecture.
+Dispatches each platform to a **native** machine so nothing is emulated. Requires two machines -- one per architecture.
+
+##### Docker
 
 On the **remote (slave) node**, start a BuildKit daemon in the foreground:
 
@@ -52,19 +57,39 @@ On the **master node**, create the multi-node builder and kick off the build:
 ./scripts/docker-build.sh                # reads configs/build.conf, builds both platforms natively, then pushes
 ```
 
-#### Option B: Local build (single machine)
+##### Podman
 
-If you only have one machine, `docker-build-local.sh` builds both platforms locally using the default builder. The non-native platform is emulated via QEMU userspace emulation, which is **significantly slower**.
+On the **remote (slave) node**, start the podman API socket (or enable `podman.socket` via systemd):
 
 ```bash
-./scripts/docker-build-local.sh
+./scripts/podman-build-remote-fg.sh
 ```
 
-Both `docker-build.sh` and `docker-build-local.sh` accept `-c <config>` to override the config file (defaults to `configs/build.conf`). Any remaining arguments are forwarded to `docker buildx build` (e.g. `--no-cache`). `docker-build-setup.sh` and `docker-build-remote-fg.sh` accept an optional config path argument and default to `configs/remote.conf`.
+On the **master node**, add the SSH connection and build:
+
+```bash
+./scripts/podman-build-setup.sh          # reads configs/podman-remote.conf, adds SSH connection
+./scripts/podman-build.sh                # reads configs/build.conf + podman-remote.conf, builds natively on each node, then pushes manifest
+```
+
+#### Option B: Local build (single machine)
+
+Builds both platforms locally. The non-native platform is emulated via QEMU userspace emulation, which is **significantly slower**.
+
+```bash
+./scripts/docker-build-local.sh          # Docker
+./scripts/podman-build-local.sh          # Podman
+```
+
+#### Script options
+
+Both `docker-build.sh` and `docker-build-local.sh` accept `-c <config>` to override the build config (defaults to `configs/build.conf`). Any remaining arguments are forwarded to `docker buildx build` (e.g. `--no-cache`). `docker-build-setup.sh` and `docker-build-remote-fg.sh` accept an optional config path argument and default to `configs/remote.conf`.
+
+The `podman-build-*` scripts follow the same pattern: `-c <config>` for build config. `podman-build.sh` also accepts `-r <config>` for the remote connection config (defaults to `configs/podman-remote.conf`). Remaining arguments are forwarded to `podman build`.
 
 ## Configuration
 
-Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
+All `*.conf` files are git-ignored. Copy the templates and edit to taste.
 
 ### `configs/build.conf` (image settings)
 
@@ -86,7 +111,7 @@ Both `*.conf` files are git-ignored. Copy the templates and edit to taste.
 
 ### `configs/remote.conf` (distributed BuildKit cluster)
 
-Only needed for distributed builds (`docker-build-setup.sh` / `docker-build-remote-fg.sh`).
+Only needed for distributed Docker builds (`docker-build-setup.sh` / `docker-build-remote-fg.sh`).
 
 | Variable | Description | Default |
 |---|---|---|
@@ -94,6 +119,20 @@ Only needed for distributed builds (`docker-build-setup.sh` / `docker-build-remo
 | `SLAVE_BUILDKIT_PORT` | Port the remote BuildKit daemon listens on | `15423` |
 | `MASTER_HOST` | IP of the master (local) machine | `127.0.0.1` |
 | `SLAVE_HOST` | IP of the slave (remote) machine | |
+| `MASTER_PLATFORM` | Platform of master node (`linux/amd64` or `linux/arm64`) | `linux/amd64` |
+| `SLAVE_PLATFORM` | Platform of slave node | `linux/arm64` |
+
+### `configs/podman-remote.conf` (distributed Podman builds)
+
+Only needed for distributed Podman builds (`podman-build-setup.sh` / `podman-build.sh`).
+
+| Variable | Description | Default |
+|---|---|---|
+| `CONNECTION_NAME` | Name for `podman system connection` | `slave` |
+| `SLAVE_USER` | SSH username on the remote node | |
+| `SLAVE_HOST` | IP of the slave (remote) machine | |
+| `SLAVE_SSH_KEY` | Path to SSH private key | `$HOME/.ssh/id_rsa` |
+| `SLAVE_PODMAN_SOCKET` | Path to podman socket on the remote | `/run/user/1000/podman/podman.sock` |
 | `MASTER_PLATFORM` | Platform of master node (`linux/amd64` or `linux/arm64`) | `linux/amd64` |
 | `SLAVE_PLATFORM` | Platform of slave node | `linux/arm64` |
 
@@ -110,13 +149,19 @@ Only needed for distributed builds (`docker-build-setup.sh` / `docker-build-remo
 │   ├── docker-build-remote-fg.sh  # Runs BuildKit on the remote slave node (distributed)
 │   ├── docker-build.sh            # Builds and pushes via the cluster builder (distributed)
 │   ├── docker-build-local.sh      # Builds and pushes on a single machine (slow, emulated)
+│   ├── podman-detect.sh           # Auto-detects whether podman needs sudo
+│   ├── podman-build-setup.sh     # Adds SSH connection to remote node (distributed)
+│   ├── podman-build-remote-fg.sh # Starts podman API socket on the remote node (distributed)
+│   ├── podman-build.sh           # Builds natively on each node, pushes manifest (distributed)
+│   ├── podman-build-local.sh     # Builds and pushes manifest on a single machine (slow, emulated)
 │   ├── va.sh                # Vulnerability analysis with Trivy + Grype
 │   ├── add-completions.sh   # Loads shell completions for va.sh into the current session
 │   ├── va.complete.bash     # Bash completions for va.sh
 │   └── va.complete.zsh      # Zsh completions for va.sh
 ├── configs/                 # Build configuration templates
-│   ├── build.conf.template  # Template for image build configuration
-│   └── remote.conf.template # Template for distributed BuildKit cluster setup
+│   ├── build.conf.template         # Template for image build configuration
+│   ├── remote.conf.template        # Template for distributed BuildKit cluster setup (Docker)
+│   └── podman-remote.conf.template # Template for distributed SSH connection setup (Podman)
 ├── image-configs/           # Configuration files baked into the image
 │   ├── tmux.conf            # tmux configuration baked into /etc/tmux.conf
 │   └── screenrc             # GNU Screen configuration (not used in image)
