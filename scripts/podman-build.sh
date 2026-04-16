@@ -44,39 +44,8 @@ else
     $PODMAN_CMD tag "$LATEST" "$TAG"
 fi
 
-# Tag arch-specific images by parsing manifest inspect output
-MANIFEST_JSON="$($PODMAN_CMD manifest inspect "$LATEST")"
-ARCH=""
-DIGEST=""
-ARCH_TAGS=()
-while IFS= read -r line; do
-    case "$line" in
-        *'"architecture"'*)
-            ARCH="$(echo "$line" | sed 's/.*"architecture"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
-            ;;
-        *'"digest"'*)
-            DIGEST="$(echo "$line" | sed 's/.*"digest"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
-            ;;
-    esac
-    # When we have both arch and digest, tag and reset
-    if [ -n "$ARCH" ] && [ -n "$DIGEST" ]; then
-        if [ "$IMAGE_TAG" = "latest" ]; then
-            ARCH_TAG="$BASE:$ARCH"
-        else
-            ARCH_TAG="$BASE:$IMAGE_TAG-$ARCH"
-        fi
-        $PODMAN_CMD tag "$DIGEST" "$ARCH_TAG"
-        ARCH_TAGS+=("$ARCH_TAG")
-        ARCH=""
-        DIGEST=""
-    fi
-done <<< "$MANIFEST_JSON"
-
 # Push re-tagged manifest and arch-specific images
 # (:latest is already pushed by farm build)
 if [ "$IMAGE_TAG" != "latest" ]; then
     $PODMAN_CMD manifest push --all "$TAG" "docker://$TAG"
 fi
-for ARCH_TAG in "${ARCH_TAGS[@]}"; do
-    $PODMAN_CMD push "$ARCH_TAG" "docker://$ARCH_TAG"
-done
