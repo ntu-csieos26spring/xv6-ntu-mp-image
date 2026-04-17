@@ -1,8 +1,6 @@
 #!/bin/sh
 set -euo pipefail
 
-# fixuid: setuid root so it can remap student's UID to match -u flag
-chown root:root /usr/local/bin/fixuid
-chmod 4755 /usr/local/bin/fixuid
+# fixuid binary arrives setuid-root from the storage stage (--chmod=4755).
 mkdir -p /etc/fixuid
 printf "user: %s\ngroup: %s\npaths:\n  - %s\n" "${USER}" "${USER}" "${HOME}" > /etc/fixuid/config.yml

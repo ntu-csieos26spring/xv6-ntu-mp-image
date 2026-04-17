@@ -9,4 +9,6 @@ apt-get update -qq -y
 apt-get install -qq -y --no-install-recommends dbus dbus-x11 systemd
 systemctl enable systemd-timedated
 apt-get clean
-rm -rf /var/lib/apt/lists/*
+rm -rf /var/lib/apt/lists/* \
+    /var/cache/debconf/*-old /var/lib/dpkg/*-old \
+    /var/log/dpkg.log /var/log/apt/* /var/log/alternatives.log

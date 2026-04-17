@@ -8,6 +8,11 @@ apt-get clean
 rm -rf /tmp/* \
     /var/lib/apt/lists/* \
     /var/tmp/* \
+    /var/cache/debconf/*-old \
+    /var/lib/dpkg/*-old \
+    /var/log/dpkg.log \
+    /var/log/apt/* \
+    /var/log/alternatives.log \
     /usr/share/doc/* \
     /usr/share/info/* \
     /usr/riscv64-linux-gnu/lib/libasan* \

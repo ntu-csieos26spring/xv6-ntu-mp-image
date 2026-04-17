@@ -122,7 +122,7 @@ FROM scratch AS storage
 # Root-owned files → COPY to /
 COPY --from=qemu-builder /usr/local/bin/qemu-system-riscv64 /rootfs/usr/local/bin/qemu-system-riscv64
 COPY --from=qemu-builder /usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin /rootfs/usr/local/share/qemu/opensbi-riscv64-generic-fw_dynamic.bin
-COPY --from=go-builder /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
+COPY --from=go-builder --chmod=4755 /usr/local/bin/fixuid /rootfs/usr/local/bin/fixuid
 COPY image-configs/tmux.conf /rootfs/etc/tmux.conf
 COPY image-root/ /rootfs/root/
 
