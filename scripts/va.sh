@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
-source "$(dirname "${BASH_SOURCE[0]}")/docker-detect.sh"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 if [ $# != 1 ]; then
 	echo 'Usage: ./scripts/va.sh <[organization/]image[:tag]>'
 	exit 1
 fi
+
+echo "Select container runtime:"
+echo "  1) docker"
+echo "  2) podman"
+read -rp "Choice [1]: " choice
+choice="${choice:-1}"
+
+case "$choice" in
+	1) source "$SCRIPT_DIR/docker-detect.sh"; CMD="$DOCKER_CMD" ;;
+	2) source "$SCRIPT_DIR/podman-detect.sh"; CMD="$PODMAN_CMD" ;;
+	*) echo "Invalid choice"; exit 1 ;;
+esac
 
 set -euo pipefail
 IMAGE="$1"
@@ -42,12 +54,12 @@ fi
 echo "===Packing Image==="
 rm -f "$TARBALL_DIR/$FILENAME.tar"
 mkdir -p "$TARBALL_DIR/$FILEDIR"
-$DOCKER_CMD save -o "$TARBALL_DIR/$FILENAME.tar" "$IMAGE" 
+$CMD save -o "$TARBALL_DIR/$FILENAME.tar" "$IMAGE" 
 
 # Trivy
 echo "===Trivy Analyzing==="
 mkdir -p "$TRIVY_CACHE/image-reports/$FILEDIR"
-$DOCKER_CMD run --rm \
+$CMD run --rm \
   -v "$TARBALL_DIR":/workspace:ro,z \
   -v "$TRIVY_CACHE":/root/.cache/trivy \
   "docker.io/aquasec/trivy:$TRIVY_IMAGE_TAG" \
@@ -61,7 +73,7 @@ echo "===Grype Analyzing==="
 mkdir -p "$GRYPE_CACHE/image-reports/$FILEDIR"
 
 
-$DOCKER_CMD run --rm \
+$CMD run --rm \
   -v "$TARBALL_DIR":/workspace:ro,z \
   -v "$GRYPE_CACHE":/.cache/grype \
   "docker.io/anchore/grype:$GRYPE_IMAGE_TAG" \
