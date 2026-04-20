@@ -221,18 +221,18 @@ COPY --chown=${USER}:${USER} --from=storage /homefs/ ${HOME}/
 # L9: Optional password (most volatile ARGs declared last)
 ARG USER_PSWD=CHANGE_ME
 ARG USE_USER_PSWD=no
-RUN ([ $USE_USER_PSWD = yes ] && \
-    echo "${USER}:${USER_PSWD}" | sudo chpasswd) || \
-    true
+RUN ([ $USE_USER_PSWD = yes ] \
+    && echo "${USER}:${USER_PSWD}" | sudo chpasswd) \
+    || true
 
 # OCI labels at very end — metadata changes never bust any RUN cache
 ARG TARGETPLATFORM
 ARG REPOSOURCE
 ARG IMGDESC
 LABEL org.opencontainers.image.architecture="${TARGETARCH}" \
-      org.opencontainers.image.platform="${TARGETPLATFORM}" \
-      org.opencontainers.image.description="${IMGDESC}" \
-      org.opencontainers.image.source="${REPOSOURCE}"
+    org.opencontainers.image.platform="${TARGETPLATFORM}" \
+    org.opencontainers.image.description="${IMGDESC}" \
+    org.opencontainers.image.source="${REPOSOURCE}"
 
 ENTRYPOINT ["fixuid", "-q"]
 CMD ["/bin/bash"]
