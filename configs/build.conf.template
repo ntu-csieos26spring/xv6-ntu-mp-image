@@ -4,7 +4,7 @@
 ORGANIZATION="ghcr.io/ntu-csieos26spring"
 IMAGE_NAME="mp-draft"
 IMAGE_TAG="latest"
-REPOSITORY_SOURCE="https://github.com/$ORGANIZATION/xv6-ntu-mp-image"
+REPOSITORY_SOURCE="https://github.com/ntu-csieos26spring/xv6-ntu-mp-image"
 IMAGE_DESCRIPTION="general heavily stripped xv6 image for machine problems"
 
 ## Image configurations ##
