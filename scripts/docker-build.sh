@@ -21,6 +21,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/docker-detect.sh"
 $DOCKER_CMD buildx build \
     --builder cluster-builder \
     --platform linux/amd64,linux/arm64 \
+    --provenance=false \
     -t "$ORGANIZATION/$IMAGE_NAME:$IMAGE_TAG"\
     --build-arg "REPOSOURCE=$REPOSITORY_SOURCE" \
     --build-arg "IMGDESC=$IMAGE_DESCRIPTION" \
